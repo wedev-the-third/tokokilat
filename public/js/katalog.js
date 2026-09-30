@@ -27,6 +27,11 @@ function buatKartu(produk) {
   const gambar = document.createElement('img');
   gambar.src = produk.gambar;
   gambar.alt = produk.nama;
+  // Muat malas: browser hanya meminta gambar yang mendekati viewport, bukan
+  // 3000 permintaan sekaligus saat render pertama (TK-1081: gambar lambat + boros kuota).
+  // decoding=async: dekode gambar tidak menyela respons terhadap input.
+  gambar.loading = 'lazy';
+  gambar.decoding = 'async';
   media.append(gambar);
 
   const badan = el('div', 'kartu-badan');
