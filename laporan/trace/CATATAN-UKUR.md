@@ -31,6 +31,18 @@ dengan angka 4x+412.
 4. `laporan/gambar/s1-sebelum-tangkapan-1.png` — ganti nama sesuai isinya bila ini flame chart
    (mis. `s1-sebelum-flamechart-1.png`).
 
+## Inventaris berkas trace (folder ini)
+
+| Berkas | Isi | Kondisi perekaman |
+|---|---|---|
+| `trace-S0-TK1081-sesudah-1.json.gz` | S0, kode perbaikan (TK-1078 + TK-1081) | **[KONFIRMASI: 4x+412 atau native?]** |
+| `trace-S1-TK1041-sesudah-1.json.gz` | S1, kode perbaikan (TK-1041) | **[KONFIRMASI: 4x+412 atau native?]** |
+| `trace-S1-TK1041-sebelum-*.json.gz` | TODO | protokol (4x + 412) |
+| `trace-S0-TK1081-sebelum-*.json.gz` | TODO | protokol (4x + 412) |
+
+Pola `trace-*.json` dan `trace-*.json.gz` diabaikan git (berkas besar). Pasangan resmi untuk
+laporan ditambahkan dengan `git add -f` atau ditaruh tautan awan.
+
 ## Data mentah (tombol "Salin JSON" alat ukur — lengkap, apa adanya)
 
 ### S0-sesudah — 2026-09-30 04:08:05 UTC — kode perbaikan (main) — kondisi protokol (4x, 412)
