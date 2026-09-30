@@ -73,24 +73,36 @@ function buatKartu(produk) {
 
 // Judul produk panjangnya beda-beda (1-3 baris). Supaya harga & tombol dalam
 // satu deret sejajar rapi, tinggi judul disamakan mengikuti judul tertinggi.
-// Mengukur semua judul terlalu lambat, jadi cukup ukur sebagian sebagai contoh.
-const JUMLAH_CONTOH = 24;
-
-function samakanTinggiJudul() {
-  const judul = document.querySelectorAll('.kartu-judul');
+//
+// Dua fase: BACA semua tinggi dulu, baru TULIS semua. Membaca offsetHeight
+// setelah menulis style.height membuat layout kotor dan memaksa layout sinkron
+// di setiap iterasi; dengan dua fase seluruh potongan hanya memicu satu layout.
+// Tinggi disamakan per potongan render: selisih antar potongan paling banyak
+// satu baris judul dan tidak sejajar deret, jadi tidak terlihat.
+function samakanTinggiJudul(kartuBaru) {
+  const judul = [];
   let tertinggi = 0;
-  for (let i = 0; i < judul.length && i < JUMLAH_CONTOH; i++) {
-    const j = judul[i];
-    j.style.height = 'auto';
-    const tinggi = j.offsetHeight;
+  for (const kartu of kartuBaru) {
+    const j = kartu.querySelector('.kartu-judul');
+    judul.push(j);
+    const tinggi = j.offsetHeight; // fase baca
     if (tinggi > tertinggi) tertinggi = tinggi;
-    j.style.height = tertinggi + 'px';
   }
-  judul.forEach((j) => { j.style.height = tertinggi + 'px'; });
+  for (const j of judul) j.style.height = tertinggi + 'px'; // fase tulis
 }
+
+// Render progresif: membangun ribuan kartu dalam satu task membuat event loop
+// sibuk berpuluh-puluh ratus ms (Style+Layout raksasa) tanpa rendering
+// opportunity, sehingga ketikan berikutnya mengantri dan teks telat muncul
+// (TK-1041). Potongan pertama dirender sinkron supaya umpan balik instan,
+// sisanya satu potongan per bingkai lewat requestAnimationFrame supaya tiap
+// task pendek dan browser bisa menyisipkan input + paint di antaranya.
+const UKURAN_POTONGAN = 60;
+let tokenRender = 0;
 
 export function renderProduk(daftar) {
   const kisi = $('#kisi');
+  const saya = ++tokenRender; // batalkan potongan render lama yang masih terjadwal
   keadaan.ditampilkan = daftar;
   kisi.innerHTML = '';
 
@@ -100,13 +112,35 @@ export function renderProduk(daftar) {
     kisi.append(kosong);
   }
 
-  for (const produk of daftar) {
-    kisi.append(buatKartu(produk));
+  function cetakPotongan(dari) {
+    const sampai = Math.min(dari + UKURAN_POTONGAN, daftar.length);
+    const potongan = document.createDocumentFragment();
+    const kartuBaru = [];
+    for (let i = dari; i < sampai; i++) {
+      const kartu = buatKartu(daftar[i]);
+      kartuBaru.push(kartu);
+      potongan.append(kartu);
+    }
+    kisi.append(potongan); // satu reflow per potongan, bukan per kartu
+    samakanTinggiJudul(kartuBaru);
+    // Kartu baru perlu ditandai .terlihat (CSS menyembunyikan kartu tanpa
+    // tanda sampai periksaGulir memeriksanya); dipanggil per potongan juga
+    // mencatat impresi kartu yang masuk layar tanpa menunggu event scroll.
+    periksaGulir();
+    return sampai;
   }
 
-  samakanTinggiJudul();
+  let berikut = daftar.length > 0 ? cetakPotongan(0) : 0;
+  function lanjutCetak() {
+    if (saya !== tokenRender) return; // ada render baru; potongan ini kedaluwarsa
+    berikut = cetakPotongan(berikut);
+    if (berikut < daftar.length) requestAnimationFrame(lanjutCetak);
+  }
+  if (berikut < daftar.length) requestAnimationFrame(lanjutCetak);
+
+  // Jumlah yang dilaporkan adalah jumlah hasil saringan penuh, bukan yang
+  // sudah masuk DOM (aturan: jumlah hasil yang ditampilkan harus benar).
   $('#ringkasan').textContent = daftar.length.toLocaleString('id-ID') + ' produk ditampilkan';
-  periksaGulir();
 }
 
 export function perbaruiHargaVoucherDiKartu() {
