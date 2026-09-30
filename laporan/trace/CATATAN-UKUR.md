@@ -31,7 +31,7 @@ dengan angka 4x+412.
 4. `laporan/gambar/s1-sebelum-tangkapan-1.png` — ganti nama sesuai isinya bila ini flame chart
    (mis. `s1-sebelum-flamechart-1.png`).
 
-## Data mentah (tombol "Salin JSON" alat ukur)
+## Data mentah (tombol "Salin JSON" alat ukur — lengkap, apa adanya)
 
 ### S0-sesudah — 2026-09-30 04:08:05 UTC — kode perbaikan (main) — kondisi protokol (4x, 412)
 ```json
@@ -42,7 +42,13 @@ dengan angka 4x+412.
   "totalBlokir": 12895,
   "jumlahInteraksi": 1,
   "inp": 1560,
-  "inpRinci": { "durasi": 1560, "jenis": "click", "target": "#au-kecil", "tundaInput": 659, "proses": 9, "presentasi": 892 },
+  "inpRinci": {
+    "durasi": 1560, "jenis": "click", "target": "#au-kecil",
+    "tundaInput": 659, "proses": 9, "presentasi": 892
+  },
+  "limaInteraksiTerlambat": [
+    { "durasi": 1560, "jenis": "click", "target": "#au-kecil", "tundaInput": 659, "proses": 9, "presentasi": 892 }
+  ],
   "cls": 0.472,
   "frameLambat": 20,
   "frameTerburuk": 1916
@@ -58,7 +64,17 @@ dengan angka 4x+412.
   "totalBlokir": 5467,
   "jumlahInteraksi": 15,
   "inp": 584,
-  "inpRinci": { "durasi": 584, "jenis": "keyup", "target": "#kolom-cari", "tundaInput": 188, "proses": 0, "presentasi": 396 },
+  "inpRinci": {
+    "durasi": 584, "jenis": "keyup", "target": "#kolom-cari",
+    "tundaInput": 188, "proses": 0, "presentasi": 396
+  },
+  "limaInteraksiTerlambat": [
+    { "durasi": 584, "jenis": "keyup", "target": "#kolom-cari", "tundaInput": 188, "proses": 0, "presentasi": 396 },
+    { "durasi": 560, "jenis": "keydown", "target": "#kolom-cari", "tundaInput": 135, "proses": 0, "presentasi": 425 },
+    { "durasi": 560, "jenis": "keyup", "target": "#kolom-cari", "tundaInput": 178, "proses": 0, "presentasi": 382 },
+    { "durasi": 536, "jenis": "keydown", "target": "#kolom-cari", "tundaInput": 108, "proses": 0, "presentasi": 428 },
+    { "durasi": 536, "jenis": "keydown", "target": "#kolom-cari", "tundaInput": 143, "proses": 0, "presentasi": 393 }
+  ],
   "cls": 0,
   "frameLambat": 40,
   "frameTerburuk": 416
@@ -74,7 +90,17 @@ dengan angka 4x+412.
   "totalBlokir": 14792,
   "jumlahInteraksi": 8,
   "inp": 7680,
-  "inpRinci": { "durasi": 7680, "jenis": "keydown", "target": "#kolom-cari", "tundaInput": 48, "proses": 0, "presentasi": 7632 },
+  "inpRinci": {
+    "durasi": 7680, "jenis": "keydown", "target": "#kolom-cari",
+    "tundaInput": 48, "proses": 0, "presentasi": 7632
+  },
+  "limaInteraksiTerlambat": [
+    { "durasi": 7680, "jenis": "keydown", "target": "#kolom-cari", "tundaInput": 48, "proses": 0, "presentasi": 7632 },
+    { "durasi": 7456, "jenis": "keydown", "target": "#kolom-cari", "tundaInput": 4193, "proses": 0, "presentasi": 3263 },
+    { "durasi": 7096, "jenis": "keydown", "target": "#kolom-cari", "tundaInput": 5765, "proses": 0, "presentasi": 1331 },
+    { "durasi": 6872, "jenis": "keydown", "target": "#kolom-cari", "tundaInput": 5918, "proses": 0, "presentasi": 954 },
+    { "durasi": 6696, "jenis": "keydown", "target": "#kolom-cari", "tundaInput": 6030, "proses": 0, "presentasi": 666 }
+  ],
   "cls": 0,
   "frameLambat": 523,
   "frameTerburuk": 7598
