@@ -68,3 +68,26 @@ Satu baris per skenario per kondisi, median dari 3 run:
 
 Angka alat ukur pojok kiri bawah hanya untuk memantau cepat — bukti diagnosis tetap
 rekaman panel Performance.
+
+## F. Pemecahan masalah perekaman (pengalaman lapangan, 2026-09-30)
+
+Gejala yang pernah terjadi: tombol **rekam-muat-ulang** di panel Performance berakhir di tab
+`about:blank` setelah menunggu lama, padahal server sehat (cek cepat: `curl -si
+http://localhost:3000/api/produk` tetap 200). Dugaan penyebab: renderer kewalahan merekam
+pemuatan ribuan gambar (jalur ini paling berat), ditambah kondisi setelah upgrade sistem.
+
+1. **Jangan pakai tombol rekam-muat-ulang.** Klik **Record** dulu, lalu tekan **F5** sendiri.
+   Hasilnya setara: rekaman menangkap navigasi + pemuatan.
+2. **Matikan checkbox Screenshots** di panel Performance sebelum merekam — filmstrip menambah
+   overhead besar justru pada beban seperti ini.
+3. **S0: Stop rekaman setelah ±15–20 dtk** (kartu tampil + diam 10 dtk). Ekor unduhan gambar
+   tidak perlu terekam — jumlah & waktu selesainya dibaca dari panel Network (aktifkan
+   *Preserve log*).
+4. Setelah upgrade sistem (Wayland/X11), bila renderer sering mati: jalankan ulang browser
+   memakai X11: `chromium --ozone-platform=x11`.
+5. Panel alat ukur yang "mati" sejenak = main thread penuh — itu gejala yang sedang diukur,
+   bukan alatnya rusak. Pastikan URL memakai `?ukur=1`.
+6. Bila pada 4x halaman benar-benar tidak bisa direkam sama sekali: `npm run start:ringan`
+   (konsisten sebelum/sesudah, catat di laporan, kabari tim), dan **screenshot tab yang mati
+   beserta kondisinya** — "nyaris tidak bisa dipakai di perangkat kelas bawah" adalah temuan
+   yang sah, bukan kegagalan mengukur.
