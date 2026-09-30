@@ -56,9 +56,9 @@ bagian "sebelum" setelah hasilnya diketahui; bila prediksi meleset, jelaskan di 
 ### Sesudah perbaikan
 
 - **Hash commit perbaikan:** ae92f15, 05f0a57, 529287a (berturut-turut: cache normalisasi; render progresif + tinggi judul dua fase; penundaan event search). Penyelarasan kecil: 965b3bd.
-- **Hasil ukur (median 3 kali):** ....
-- **Prediksi vs kenyataan:** ....
-- **Efek samping yang muncul:** ....
+- **Hasil ukur (median 3 kali):** 1 run protokol per sisi, dianalisis dari berkas trace (median 3 run menyusul). Interaksi terburuk S1 (keydown) **14.318 ms -> 4.755 ms**; long task terlama **14.810 ms -> 2.909 ms**; jumlah long task > 50 ms **34 -> 10**. Angka native pendukung: INP 7.680 -> 584 ms. Validasi silang: CLS hitung-ulang dari trace (0,4716) cocok dengan alat ukur (0,472).
+- **Prediksi vs kenyataan:** SEBAGIAN. Arah dan besar penurunan sesuai (turun +-3x pada CPU 4x), tetapi prediksi "< 100 ms" MELESET: masih ada long task dari potongan render 60 kartu per bingkai (ratusan ms per potongan pada 4x), dan durasi interaksi ikut menunggu *paint* berikutnya yang tertahan antrean potongan (komponen "presentasi" dominan, bukan "proses"). Model mental yang keliru: menilai biaya handler input saja, padahal EventTiming mengukur sampai frame berikutnya tergambar. Run sesudah juga tampak mencakup fase render bertahap awal (206 gambar diminta selama rekaman) — bila menunggu halaman betul-betul tenang diperkirakan lebih baik; perlu verifikasi pada run lanjutan.
+- **Efek samping yang muncul:** Kartu masuk DOM bertahap (terlihat dari 206 gambar yang diminta selama run, bukan 3.000). Potongan render tetap menghasilkan long task > 100 ms pada 4x — dicatat sebagai rekomendasi lanjutan (potongan lebih kecil atau `content-visibility`), bukan regresi fitur.
 
 ---
 
@@ -95,9 +95,9 @@ bagian "sebelum" setelah hasilnya diketahui; bila prediksi meleset, jelaskan di 
 ### Sesudah perbaikan
 
 - **Hash commit perbaikan:** d258eb4 (bagian P1: dimensi intrinsik gambar). Bagian banner menunggu placeholder dari P2 di promo.js.
-- **Hasil ukur (median 3 kali):** ....
-- **Prediksi vs kenyataan:** ....
-- **Efek samping yang muncul:** ....
+- **Hasil ukur (median 3 kali):** 1 run protokol sesudah: CLS S0 **0,472** (hitung-ulang dari trace: 0,4716 — cocok). Kontribusi CLS dari gambar hilang total: kotak gambar sudah dipesan sejak layout pertama (atribut 480x480).
+- **Prediksi vs kenyataan:** TEPAT untuk bagian P1: CLS dari gambar menjadi +-0. Sesuai catatan prediksi, sisa CLS 0,472 yang dominan berasal dari banner promo yang di-prepend +-1,8 dtk (bagian P2, placeholder belum ada) — target 0,1 baru dinilai setelah bagian P2 menyatu.
+- **Efek samping yang muncul:** Tidak ada efek samping baru; tinggi kartu stabil sejak layout pertama (tidak "tumbuh" saat gambar termuat).
 
 ---
 
@@ -136,6 +136,6 @@ bagian "sebelum" setelah hasilnya diketahui; bila prediksi meleset, jelaskan di 
 ### Sesudah perbaikan
 
 - **Hash commit perbaikan:** 3fd334d.
-- **Hasil ukur (median 3 kali):** ....
-- **Prediksi vs kenyataan:** ....
-- **Efek samping yang muncul:** ....
+- **Hasil ukur (median 3 kali):** 1 run protokol sesudah (S0, 412x915): permintaan `/img/p/` saat muat = **8** — sebanding kartu terlihat. Sebelum (dari trace S1-sebelum, kode asli): **3.000 permintaan dilepas** saat render dan **0 selesai** selama rekaman S1 (antrean unduhan jenuh). Di trace S0: `/api/produk` = **1 permintaan**.
+- **Prediksi vs kenyataan:** TEPAT: permintaan turun dari +-3.000 (sesuai dugaan) ke 8, jauh di bawah batas < 100; perilaku "bertambah saat menggulir" terkonfirmasi (206 gambar selama run S1 sesudah). Dugaan Rudi #2 terbantah dengan angka: kemacetan bukan pada API (1 permintaan cepat) melainkan volume permintaan gambar yang diciptakan halaman sendiri.
+- **Efek samping yang muncul:** Gambar jauh di bawah termuat saat digulir mendekat — diinginkan (hemat kuota); tab tetap jatuh ke about:blank ketika merekam pemuatan kode asli pada 4x (screenshot: `laporan/gambar/s0-sebelum-about-blank.png`) — temuan pendukung "nyaris tak terpakai".
