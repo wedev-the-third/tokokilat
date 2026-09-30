@@ -32,6 +32,13 @@ function buatKartu(produk) {
   // decoding=async: dekode gambar tidak menyela respons terhadap input.
   gambar.loading = 'lazy';
   gambar.decoding = 'async';
+  // Dimensi intrinsik sama dengan SVG dari server (480x480) agar browser bisa
+  // memesan kotak gambar berrasio tetap sejak layout pertama; gambar yang
+  // termuat tidak lagi menambah tinggi kartu dan menggeser konten di bawahnya
+  // (TK-1078: layout shift saat gambar termuat). Pergeseran akibat banner
+  // promo yang di-prepend belakangan ditangani terpisah di promo.js (P2).
+  gambar.width = 480;
+  gambar.height = 480;
   media.append(gambar);
 
   const badan = el('div', 'kartu-badan');
