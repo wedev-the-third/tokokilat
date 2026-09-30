@@ -15,9 +15,24 @@ function normalkan(teks) {
     .trim();
 }
 
-function cocok(produk, kunci) {
-  const teks = normalkan(produk.nama + ' ' + produk.merek + ' ' + produk.kategori + ' ' + produk.kota);
-  return kunci.split(' ').every((k) => teks.includes(k));
+// normalisasi memakai NFD + dua regex - mahal jika diulang untuk 3000 produk
+// pada SETIAP ketikan. Teks siap-cari tiap produk cukup dihitung sekali dan
+// di-cache (id produk -> teks ternormalkan), karena data produk tidak berubah.
+const cacheTeksCari = new Map();
+
+function teksCari(produk) {
+  let teks = cacheTeksCari.get(produk.id);
+  if (teks === undefined) {
+    teks = normalkan(produk.nama + ' ' + produk.merek + ' ' + produk.kategori + ' ' + produk.kota);
+    cacheTeksCari.set(produk.id, teks);
+  }
+  return teks;
+}
+
+// kataKunci: array kata yang sudah dipecah sekali per saringan (bukan per produk).
+function cocok(produk, kataKunci) {
+  const teks = teksCari(produk);
+  return kataKunci.every((k) => teks.includes(k));
 }
 
 const PEMBANDING = {
@@ -29,9 +44,10 @@ const PEMBANDING = {
 
 export function terapkanSaringan() {
   const kunci = normalkan(saringan.kata);
+  const kataKunci = kunci ? kunci.split(' ') : [];
   let hasil = keadaan.semuaProduk.filter((p) => {
     if (saringan.kategori !== 'Semua' && p.kategori !== saringan.kategori) return false;
-    if (kunci && !cocok(p, kunci)) return false;
+    if (kataKunci.length && !cocok(p, kataKunci)) return false;
     return true;
   });
   if (PEMBANDING[saringan.urut]) hasil = hasil.slice().sort(PEMBANDING[saringan.urut]);
@@ -41,6 +57,10 @@ export function terapkanSaringan() {
 }
 
 export function pasangPencarian() {
+  // Panaskan cache sekali saat halaman dimuat, bukan pada ketikan pertama:
+  // memindahkan biaya normalisasi 3000 produk dari jalur interaksi ke jalur muat.
+  for (const p of keadaan.semuaProduk) teksCari(p);
+
   const kolom = $('#kolom-cari');
   kolom.addEventListener('input', () => {
     saringan.kata = kolom.value;
