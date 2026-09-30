@@ -130,7 +130,7 @@ export function renderProduk(daftar) {
     return sampai;
   }
 
-  let berikut = daftar.length > 0 ? cetakPotongan(0) : 0;
+  let berikut = cetakPotongan(0); // potongan pertama; saat hasil kosong ini juga memanggil periksaGulir seperti semula
   function lanjutCetak() {
     if (saya !== tokenRender) return; // ada render baru; potongan ini kedaluwarsa
     berikut = cetakPotongan(berikut);
