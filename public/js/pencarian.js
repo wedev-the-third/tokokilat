@@ -5,6 +5,9 @@ import { keadaan, renderProduk } from './katalog.js';
 
 const saringan = { kata: '', kategori: 'Semua', urut: 'relevan' };
 
+// Pengirim event 'search' yang ditunda sampai ketikan selesai (lihat terapkanSaringan).
+let pengaturSearch = 0;
+
 // "Sepatu Lari" == "sepatu  lari" == "SEPATU-LARI"
 function normalkan(teks) {
   return teks
@@ -53,7 +56,18 @@ export function terapkanSaringan() {
   if (PEMBANDING[saringan.urut]) hasil = hasil.slice().sort(PEMBANDING[saringan.urut]);
   renderProduk(hasil);
 
-  if (window.Lacak && kunci) window.Lacak.kirim('search', { kata: saringan.kata, jumlah: hasil.length });
+  // Event 'search' tetap terkirim dengan kata kunci akhir + jumlah hasil, tetapi
+  // cukup sekali setelah pengguna berhenti mengetik. Setiap Lacak.kirim()
+  // menjalankan sidik jari perangkat +-2 juta iterasi hash secara sinkron di
+  // dalam SDK - terlalu mahal untuk dipanggil pada tiap ketikan (koordinasi
+  // dengan P3 pemilik domain SDK; aturan TUGAS.md no. 1 mengizinkan mengubah
+  // waktu pemanggilan selama event tetap terkirim dengan info yang masuk akal).
+  if (window.Lacak && kunci) {
+    clearTimeout(pengaturSearch);
+    const kata = saringan.kata;
+    const jumlah = hasil.length;
+    pengaturSearch = setTimeout(() => window.Lacak.kirim('search', { kata, jumlah }), 500);
+  }
 }
 
 export function pasangPencarian() {
