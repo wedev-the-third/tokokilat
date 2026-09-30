@@ -26,17 +26,18 @@ dan penyimpangan apa pun dari protokol di TUGAS.md bagian 7.
 
 ## 4. Temuan
 
-Urutkan berdasarkan dampak, bukan urutan tiket. Blok T-01 s.d. T-03 di bawah adalah kontribusi
-draf P1 (angka `[DIISI]` menunggu pengukuran; integrasi akhir oleh P3; blok P2 dan P3 menyusul).
+Urutkan berdasarkan dampak, bukan urutan tiket. Blok T-01 s.d. T-03 adalah kontribusi P1
+(integrasi akhir oleh P3; blok P2 dan P3 menyusul). Angka = 1 run per sisi, dianalisis dari
+berkas trace `laporan/trace/` (median 3 run menyusul); rinci di `laporan/trace/CATATAN-UKUR.md`.
 
 ### T-01: Kolom pencarian membeku setiap ketikan
 - **Tiket terkait:** TK-1041 (Bu Wulan: "hurufnya munculnya telat-telat, kadang HP seperti hang").
 - **Gejala bagi pengguna:** teks yang diketik baru muncul lama; halaman terasa mati saat mencari;
   pembeli menyerah dan pindah toko.
-- **Bukti:** [DIISI: trace S1 sebelum — track Interactions + flame chart. Tandai: (1) task panjang
-  pada tiap event `input`, (2) blok besar `Lacak.kirim` dari lacak.min.js (fingerprint +-2 juta
-  iterasi hash per panggilan), (3) `buatKartu`/`append` ribuan node, (4) `samakanTinggiJudul`
-  dengan layout sinkron berulang]. Angka: INP sebelum [DIISI] ms.
+- **Bukti:** `trace-S1-TK1041-sebelum-1.json.gz` (Interactions + flame chart): interaksi terburuk
+  **14.318 ms** (keydown di `#kolom-cari`, komponen "presentasi" dominan), 34 long task, terlama
+  **14.810 ms**; 3.000 permintaan `/img/p/` dilepas ulang saat render dan **0 selesai** selama
+  rekaman. Angka native pendukung: INP 7.680 ms dengan `tundaInput` s.d. 6.030 ms (alat ukur).
 - **Akar masalah dan mekanismenya:** handler `input` (`pencarian.js`) menjalankan semuanya sinkron
   dalam satu task: (1) `cocok()` menormalkan ulang 4 field x 3000 produk dengan NFD + 2 regex pada
   SETIAP ketikan; (2) `renderProduk` (`katalog.js`) mengosongkan lalu membangun ulang seluruh kisi
@@ -58,15 +59,19 @@ draf P1 (angka `[DIISI]` menunggu pengukuran; integrasi akhir oleh P3; blok P2 d
   menggulir dan jumlah hasil tetap benar; debounce pada kolom cari ditolak karena memindah biaya
   ke pengguna (operability); virtualisasi penuh ditolak karena berisiko melanggar aturan jangkauan
   gulir.
-- **Hasil:** INP S1 [DIISI] -> [DIISI] ms; long task saat mengetik [DIISI] -> [DIISI].
+- **Hasil:** interaksi terburuk S1 **14.318 -> 4.755 ms**; long task terlama **14.810 -> 2.909 ms**;
+  jumlah long task 34 -> 10. Belum memenuhi target (<= 200 ms / <= 100 ms) — analisis dan
+  rekomendasi lanjutan di bagian 6; prediksi vs kenyataan dibahas jujur di PREDIKSI P-01.
 
 ### T-02: Tiga ribu permintaan gambar untuk satu layar
 - **Tiket terkait:** TK-1081 (Pak Hendra: "gambar lama sekali munculnya... kuota saya cepat habis").
 - **Gejala bagi pengguna:** kotak abu-abu lama; gulir cepat memperburuk; kuota terkuras padahal
   hanya membuka satu halaman.
-- **Bukti:** [DIISI: panel Network pada S0 sebelum — jumlah permintaan `/img/p/*.svg` = +-3000,
-  gambar terakhir selesai pada detik ke-[DIISI], total [DIISI] MB; bandingkan `/api/produk`:
-  1 permintaan, selesai +-180 ms, [DIISI] KB].
+- **Bukti:** kode asli (trace S1-sebelum): **3.000 permintaan `/img/p/` dilepas** dan antrean
+  begitu jenuh sehingga **0 selesai** selama rekaman; merekam pemuatan pada CPU 4x bahkan membuat
+  tab jatuh ke about:blank (tangkapan: `gambar/s0-sebelum-about-blank.png`). Sesudah (trace S0,
+  412x915): **8 permintaan** saat muat; `/api/produk` = **1 permintaan**. (Angka Network panel
+  S0-sebelum menunggu run ulang.)
 - **Akar masalah dan mekanismenya:** `buatKartu` (`katalog.js`) memasang `img.src` untuk semua
   produk secara eager begitu kisi dirender. Server menunda tiap gambar 60-300 ms (simulasi CDN)
   dan browser hanya membuka +-6 koneksi paralel per host: 3000 x +-180 ms / 6 = +-90 detik
@@ -82,15 +87,17 @@ draf P1 (angka `[DIISI]` menunggu pengukuran; integrasi akhir oleh P3; blok P2 d
   diinginkan); simpan/cetak halaman tidak lagi memuat semua gambar. Alternatif ditolak:
   `content-visibility` (memangkas render, bukan permintaan), gambar versi kecil (server milik tim
   lain), `IntersectionObserver` manual (meniru mekanisme native).
-- **Hasil:** permintaan gambar S0 [DIISI] -> [DIISI]; total byte [DIISI] -> [DIISI]; gambar
-  terakhir [DIISI] dtk -> [DIISI] dtk.
+- **Hasil:** permintaan gambar saat muat **+-3.000 -> 8**; selama run S1 sesudah hanya **206**
+  gambar diminta (bertambah saat menggulir, bukan sekaligus). Total byte & waktu gambar terakhir
+  menyusul bersama run Network panel.
 
 ### T-03: Halaman melompat sendiri sampai pengguna salah klik
 - **Tiket terkait:** TK-1078 (Kak Rara: "kepencet malah iklan promo").
 - **Gejala bagi pengguna:** mau menekan barang paling atas, halaman turun sendiri, jari mengenai
   banner promo.
-- **Bukti:** [DIISI: track Layout Shifts pada S0 sebelum — rangkaian shift kecil saat gambar
-  termuat + satu shift besar pada detik ke-+-1,8 saat banner di-prepend].
+- **Bukti:** sesudah (trace S0-sesudah): CLS **0,4716** (alat ukur: 0,472 — cocok) dengan sisa
+  shift dominan pada momen banner masuk; kontribusi gambar sudah hilang. Track Layout Shifts
+  run SEBELUM menunggu pengukuran ulang (run pertama gagal: about:blank).
 - **Akar masalah dan mekanismenya:** (1) `img` tanpa dimensi intrinsik + CSS `width:100%;
   height:auto` membuat tinggi kotak gambar 0 saat layout pertama — setiap gambar yang selesai
   dimuat menambah tinggi kartu dan menggeser semua konten di bawahnya; (2) banner promo di-
@@ -106,18 +113,33 @@ draf P1 (angka `[DIISI]` menunggu pengukuran; integrasi akhir oleh P3; blok P2 d
   P2 di `promo.js`.
 - **Trade-off:** atribut dipilih dibanding `aspect-ratio` CSS (setara hasil, atribut juga menjadi
   sinyal rasio bagi pemuatan malas). CLS total baru dinilai setelah bagian P2 menyatu.
-- **Hasil:** CLS S0 [DIISI] -> [DIISI] (catat juga berapa kontribusi masing-masing: gambar vs banner).
+- **Hasil:** CLS S0 sesudah (bagian P1 masuk) = **0,472**, seluruh sisa shift dari banner —
+  sesuai prediksi P-02 bahwa penilaian target 0,1 menunggu placeholder banner dari P2.
 
 ## 5. Dugaan yang ternyata keliru
 Dugaan dari catatan serah terima, tiket, atau tim sendiri yang terbantah pengukuran. Sertakan angkanya.
 
 - **Rudi #2 — "API produk lambat, minta backend tambah server"** (kontribusi P1): terbantah.
-  `/api/produk` adalah satu permintaan yang selesai +-180 ms (delay simulasi server) dengan ukuran
-  [DIISI], sementara waktu tunggu yang dirasakan pengguna berasal dari +-3000 permintaan gambar
-  yang dilepas halaman sendiri (lihat T-02). Menambah server backend tidak akan mengubah apa pun.
+  terbukti di trace: `/api/produk` = **1 permintaan** (delay simulasi 180 ms di `server.js`),
+  sementara **3.000 permintaan gambar** dilepas halaman sendiri dan menghabiskan antrean unduhan
+  (lihat T-02). Menambah server backend tidak akan mengubah apa pun.
 
 ## 6. Yang belum beres dan rekomendasi
 Masalah yang tersisa, risiko, dan usulan untuk tim lain (backend, vendor SDK, desain).
+
+**Kontribusi P1:**
+1. **INP S1 belum memenuhi target** (4.755 ms pada run protokol; turun 3x dari 14.318 ms tapi
+   belum <= 200 ms). Sisa biaya berasal dari potongan render 60 kartu per bingkai (long task
+   ratusan ms pada CPU 4x) dan durasi interaksi yang menunggu paint berikutnya. Rekomendasi:
+   (a) potongan lebih kecil (mis. 20 kartu) — harga: seluruh kartu masuk DOM lebih lambat;
+   (b) `content-visibility: auto` pada kartu — harga: biaya render turun tapi perilaku scroll
+   bar berubah; (c) pastikan run berikut menunggu fase render bertahap selesai sebelum mengetik
+   (run pertama tampak mencakup fase tersebut). Perlu diukur sebelum dipilih.
+2. **S0-sebelum belum terukur penuh** — tab jatuh ke about:blank saat merekam pemuatan pada 4x
+   (bukti: `gambar/s0-sebelum-about-blank.png`). Rencana: ulangi dengan Record -> F5 -> Stop
+   dini, atau minimal dokumentasi Network panel tanpa Performance panel.
+3. **Koordinasi P2**: placeholder tinggi banner sebelum `/api/promo` selesai — sisa CLS 0,472
+   ada di sana; tanpa itu target CLS 0,1 tidak mungkin tercapai tim.
 
 ## 7. Pernyataan penggunaan AI dan pembagian kerja
 Alat AI yang dipakai dan untuk apa. Kontribusi tiap anggota.
