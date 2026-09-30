@@ -3,45 +3,56 @@
 Protokol acuan (TUGAS.md bag. 7): Incognito, viewport 412x915, CPU 4x slowdown, `?ukur=1`,
 Reset sebelum tiap skenario, 3 run, median.
 
+## Hasil analisis berkas trace (diekstrak dari trace, bukan alat ukur)
+
+Sumber: `trace-S1-TK1041-sebelum-1.json.gz`, `trace-S1-TK1041-sesudah-1.json.gz`,
+`trace-S0-TK1081-sesudah-1.json.gz`. Kondisi perekaman sesudah: [KONFIRMASI 4x+412].
+Angka per-run tunggal (bukan median 3) — ditandai demikian di LAPORAN.
+
+| Metrik | Sebelum (kode asli) | Sesudah (main) |
+|---|---|---|
+| S1 interaksi terburuk (keydown) | **14.318 ms** | **4.755 ms** |
+| S1 long task > 50 ms: jumlah / terlama | 34 / **14.810 ms** | 10 / **2.909 ms** |
+| S1 permintaan `/img/p/` selama rekaman | **3.000 dilepas, 0 selesai** (antrean jenuh) | **206 diminta & selesai** |
+| S0 permintaan `/img/p/` saat muat (412x915) | belum terukur (run gagal, lihat gambar) | **8** — sebanding kartu terlihat |
+| S0 CLS | belum terukur | **0,4716** (alat ukur: 0,472 — cocok) |
+| `/api/produk` di trace S0 | - | **1 permintaan** (bantahan Rudi #2) |
+
+Pencocokan silang CLS trace vs alat ukur (0,4716 vs 0,472) memvalidasi cara hitung.
+
 ## Status
 
-| Kode | Kondisi run | Run | Angka kunci | Status utk tabel laporan |
-|---|---|---|---|---|
-| S0-sesudah (TK-1078/1081) | **protokol (4x + 412)** | **1/3** | CLS **0,472**; LT terlama 1187 ms; 20 frame > 50 ms | kondisi sah — perlu 2 run lagi + angka Network |
-| S1-sesudah (TK-1041) | native*, 1/3 | - | INP **584 ms**; LT terlama 256 ms; 47 LT | pendukung — perlu ulang 3 run protokol |
-| S1-sebelum (TK-1041) | native*, 1/3 | - | INP **7680 ms**; LT terlama 4305 ms; 54 LT; tunda input s.d. 6030 ms | pendukung — perlu ulang 3 run protokol |
-| S0-sebelum (TK-1078/1081) | protokol (4x + 412) | 0/3 | - | TODO: 3 run + angka Network + tangkapan about:blank bila terjadi |
+| Kode | Kondisi run | Run | Status |
+|---|---|---|---|
+| S1-sebelum | protokol (4x + 412) | 1/3 + trace | ada angka + trace; 2 run lagi opsional |
+| S1-sesudah | [KONFIRMASI 4x+412] | 1/3 + trace | ada angka + trace; 2 run lagi opsional |
+| S0-sesudah | protokol (4x + 412) | 1/3 + trace | ada angka + trace; 2 run lagi opsional |
+| S0-sebelum | protokol (4x + 412) | 0/3 | **run gagal -> tab about:blank** (bukti: `../gambar/s0-sebelum-about-blank.png`); ulangi: Record -> F5 -> Stop +-15-20 dtk, atau minimal catat Network panel tanpa merekam |
 
-\* native = tanpa device toolbar 412x915 dan tanpa CPU 4x. Angka native tetap dicatat sebagai
-bukti arah, tetapi tabel utama LAPORAN.md hanya boleh memakai angka protokol; jangan dicampur
-dengan angka 4x+412.
+## Inventaris berkas (folder ini dan ../gambar)
 
-## Catatan penting dari data ini
+| Berkas | Isi |
+|---|---|
+| `trace-S1-TK1041-sebelum-1.json.gz` | S1 sebelum (kode asli) — 325 ribu event |
+| `trace-S1-TK1041-sesudah-1.json.gz` | S1 sesudah (main) |
+| `trace-S0-TK1081-sesudah-1.json.gz` | S0 sesudah (main) — load di 412x915 |
+| `../gambar/s0-sebelum-about-blank.png` | tab mati saat merekam pemuatan pada 4x (bukti pendukung TK-1081) |
+| `trace-S0-TK1081-sebelum-*.json.gz` | TODO (lihat Status) |
 
-1. INP 1560 ms pada S0-sesudah berasal dari klik tombol **"Kecilkan" milik alat ukur sendiri**
-   (`#au-kecil`) — bukan interaksi skenario. Abaikan; jangan klik alat ukur selama jendela
-   ukur (kecuali Reset sebelum mulai).
-2. CLS 0,472 pada S0-sesudah **dikonfirmasi direkam pada kondisi protokol (CPU 4x, 412x915)**
-   dan konsisten dengan prediksi P-02: sisa CLS dominan = banner promo yang di-prepend setelah
-   `/api/promo` selesai (delay server 1800 ms) — bagian P2 di `promo.js`, placeholder belum
-   ada. Atribusi per sumber dibaca dari track Layout Shifts pada run berikutnya.
-3. Angka Network untuk S0 belum ada: jumlah permintaan `/img/p/`, waktu gambar terakhir
-   selesai, total transfer, serta durasi & ukuran `/api/produk` (bahan bantahan Rudi #2).
-   **Wajib dicatat di setiap run S0 berikutnya** (panel Network, Preserve log aktif).
-4. `laporan/gambar/s1-sebelum-tangkapan-1.png` — ganti nama sesuai isinya bila ini flame chart
-   (mis. `s1-sebelum-flamechart-1.png`).
+Pola `trace-*.json` dan `trace-*.json.gz` diabaikan git; pasangan resmi ditambah `git add -f`
+atau tautan awan.
 
-## Inventaris berkas trace (folder ini)
+## Catatan penting
 
-| Berkas | Isi | Kondisi perekaman |
-|---|---|---|
-| `trace-S0-TK1081-sesudah-1.json.gz` | S0, kode perbaikan (TK-1078 + TK-1081) | **[KONFIRMASI: 4x+412 atau native?]** |
-| `trace-S1-TK1041-sesudah-1.json.gz` | S1, kode perbaikan (TK-1041) | **[KONFIRMASI: 4x+412 atau native?]** |
-| `trace-S1-TK1041-sebelum-*.json.gz` | TODO | protokol (4x + 412) |
-| `trace-S0-TK1081-sebelum-*.json.gz` | TODO | protokol (4x + 412) |
-
-Pola `trace-*.json` dan `trace-*.json.gz` diabaikan git (berkas besar). Pasangan resmi untuk
-laporan ditambahkan dengan `git add -f` atau ditaruh tautan awan.
+1. INP 1560 ms pada S0-sesudah (alat ukur) berasal dari klik tombol "Kecilkan" alat ukur
+   (`#au-kecil`) — bukan skenario; abaikan.
+2. CLS 0,472 sesudah = sisa CLS dominan dari banner promo (`/api/promo` ditunda 1800 ms,
+   bagian P2 di promo.js) — konsisten prediksi P-02.
+3. Angka Network S0-sebelum masih kosong; walau trace gagal, panel Network tetap bisa dicatat
+   tanpa merekam: buka halaman, diam sampai spinner selesai, catat jumlah `/img/p/` + waktu
+   gambar terakhir + total transfer + `/api/produk`.
+4. Interaksi terburuk S1-sesudah (4.755 ms) kemungkinan mencakup fase render bertahap;
+   lihat analisis jujur di PREDIKSI P-01 dan rekomendasi di LAPORAN bagian 6.
 
 ## Data mentah (tombol "Salin JSON" alat ukur — lengkap, apa adanya)
 
