@@ -139,3 +139,112 @@ bagian "sebelum" setelah hasilnya diketahui; bila prediksi meleset, jelaskan di 
 - **Hasil ukur (median 3 kali):** 1 run protokol sesudah (S0, 412x915): permintaan `/img/p/` saat muat = **8** — sebanding kartu terlihat. Sebelum (dari trace S1-sebelum, kode asli): **3.000 permintaan dilepas** saat render dan **0 selesai** selama rekaman S1 (antrean unduhan jenuh). Di trace S0: `/api/produk` = **1 permintaan**.
 - **Prediksi vs kenyataan:** TEPAT: permintaan turun dari +-3.000 (sesuai dugaan) ke 8, jauh di bawah batas < 100; perilaku "bertambah saat menggulir" terkonfirmasi (206 gambar selama run S1 sesudah). Dugaan Rudi #2 terbantah dengan angka: kemacetan bukan pada API (1 permintaan cepat) melainkan volume permintaan gambar yang diciptakan halaman sendiri.
 - **Efek samping yang muncul:** Gambar jauh di bawah termuat saat digulir mendekat — diinginkan (hemat kuota); tab tetap jatuh ke about:blank ketika merekam pemuatan kode asli pada 4x (screenshot: `laporan/gambar/s0-sebelum-about-blank.png`) — temuan pendukung "nyaris tak terpakai".
+
+---
+
+## P-04: Tombol "+ Keranjang" terlambat memberi umpan balik (TK-1044)
+
+**Tiket terkait:** TK-1044 (Pak Anton — tombol tampak tidak bereaksi sehingga ditekan berulang kali)
+**Tanggal dan hash commit entri ini:** 2026-10-02, hash: `PREDIKSI_COMMIT_P3`.
+
+### Sebelum perbaikan
+
+- **Yang teramati di trace (baseline, S2):** tiga run pada produk yang sama menghasilkan
+  durasi interaksi produk **112, 151, dan 133 ms** (median **133 ms**), processing handler
+  **38,5, 63,6, dan 64,2 ms** (median **63,6 ms**), serta long task terlama **122, 121,
+  dan 126 ms** (median **122 ms**). INP median masih di bawah target 200 ms, tetapi long
+  task median melewati batas 100 ms. Rincian dan koreksi interaksi alat ukur ada di
+  `laporan/trace/CATATAN-P3.md`.
+- **Dugaan mekanisme:** `tambahKeKeranjang()` membaca dan mem-parsing keranjang serta riwayat
+  aktivitas yang besar, lalu memanggil `Lacak.kirim('add_to_cart', ...)` secara sinkron
+  dengan payload berisi objek produk, seluruh keranjang, dan seluruh riwayat. Penyimpanan
+  state dan perubahan lencana, teks tombol, serta toast berada setelah pemanggilan tersebut.
+  Walaupun properti DOM nantinya diubah dalam task yang sama, browser belum memperoleh
+  *rendering opportunity* sampai handler selesai; pengguna melihat jeda tanpa status yang
+  jelas dan terdorong menekan tombol kembali.
+- **Rencana perubahan:**
+  1. Perbarui state keranjang dan riwayat secara benar, lalu ubah lencana, teks tombol, dan
+     toast sebelum menjadwalkan pekerjaan analitik.
+  2. Kirim event `add_to_cart` setelah browser mendapat kesempatan menggambar umpan balik,
+     bukan pada jalur kritis interaksi.
+  3. Kecilkan payload analitik menjadi ringkasan yang tetap masuk akal: identitas produk,
+     kuantitas produk, total item, jumlah entri riwayat, dan sumber; jangan menyalin seluruh
+     riwayat 9.000+ entri ke SDK.
+  4. Event `add_to_cart` tetap wajib terkirim; `public/vendor/lacak.min.js` tidak diubah.
+- **Prediksi terukur:** median interaksi S2 turun dari **133 ms menjadi < 100 ms** dan tidak
+  ada task yang menaungi interaksi > 100 ms. Teks tombol/lencana terlihat pada frame pertama
+  setelah klik. Jumlah keranjang tetap bertambah tepat satu dan event `add_to_cart` tetap
+  terkirim satu kali dengan data ringkas. Task analitik mungkin masih terlihat sesudah paint,
+  tetapi tidak lagi memperpanjang durasi presentasi klik.
+- **Trade-off:** event analitik terkirim sedikit lebih lambat daripada mutasi keranjang. Ada
+  risiko event hilang bila tab ditutup tepat setelah klik; untuk halaman ini dipilih karena
+  umpan balik pengguna lebih penting dan event tetap dijadwalkan segera setelah paint.
+  Alternatif menghapus SDK ditolak karena melanggar aturan tugas. Alternatif hanya memindahkan
+  `Lacak.kirim` ke akhir handler juga ditolak karena browser tetap tidak dapat melakukan paint
+  sebelum task sinkron itu selesai.
+- **Kaitan dugaan Rudi:** dugaan SDK "berat" belum dianggap salah hanya dari namanya; trace
+  dan uji sesudah akan menentukan kontribusinya. Bagian yang akan dibantah adalah kesimpulan
+  bahwa SDK "tidak boleh disentuh" berarti jalur pemanggilan dan payload tidak bisa diperbaiki.
+  Aturan tugas secara eksplisit memperbolehkan perubahan cara, waktu, dan isi event selama
+  setiap event tetap terkirim dengan informasi yang masuk akal.
+
+### Sesudah perbaikan
+
+- **Hash commit perbaikan:** belum ada.
+- **Hasil ukur (median 3 kali):** belum diukur.
+- **Prediksi vs kenyataan:** diisi setelah tiga run S2 sesudah.
+- **Efek samping yang muncul:** diisi setelah pengujian regresi.
+
+---
+
+## P-05: Tiga klik cepat membuat tiga pesanan (TK-1052)
+
+**Tiket terkait:** TK-1052 (Mbak Sari — satu niat pembelian menghasilkan tiga pesanan)
+**Tanggal dan hash commit entri ini:** 2026-10-02, hash: `PREDIKSI_COMMIT_P3`.
+
+### Sebelum perbaikan
+
+- **Yang teramati di trace (baseline, S3):** setiap run berisi tiga klik cepat dan tepat
+  **3 POST `/api/pesanan`**, seluruhnya mendapat **201 application/json**, diikuti tiga GET
+  penyegaran lencana. Ketiga run masing-masing menghasilkan **3 pesanan**; targetnya 1.
+  Median INP alat ukur **112 ms** dan median long task terlama **97 ms**, sehingga masalah
+  utama bukan INP, melainkan perlindungan transaksi. Rincian ada di
+  `laporan/trace/CATATAN-P3.md`.
+- **Dugaan mekanisme:** `beliSekarang()` tidak memiliki penanda transaksi *in-flight* dan
+  tidak menonaktifkan tombol pada awal handler. Setiap klik membuat invocation baru,
+  mengirim event `begin_checkout`, lalu memulai POST tersendiri. Teks baru berubah menjadi
+  `Dipesan` setelah `await fetch(...)` selesai sekitar 350 ms kemudian. Selama jendela itu,
+  tombol masih tampak aktif sehingga tiga invocation berjalan bersamaan; server tidak dapat
+  mengetahui bahwa ketiganya berasal dari satu niat pengguna.
+- **Rencana perubahan:**
+  1. Pasang guard *in-flight* berdasarkan produk dan set `disabled`/`aria-busy` secara
+     sinkron pada awal klik; klik berikutnya saat request berjalan tidak membuat invocation
+     atau POST baru.
+  2. Ubah teks segera menjadi `Memproses…` agar state transaksi bersifat
+     *self-descriptive*, lalu `await fetch` memberi browser kesempatan menggambarnya.
+  3. Pertahankan event `begin_checkout`, tetapi gunakan payload ringkas dan jadwalkan di luar
+     jalur kritis paint seperti pada TK-1044.
+  4. Gunakan `try/catch/finally`: pada sukses tampilkan ID pesanan dan perbarui lencana; pada
+     gagal beri pesan yang jelas; pada akhir lepaskan guard serta pulihkan tombol agar
+     pengguna dapat melakukan pembelian baru secara sengaja.
+- **Prediksi terukur:** tiga klik cepat pada S3 menghasilkan tepat **1 POST**, **1 respons
+  201**, **1 GET** penyegaran lencana, dan **1 pesanan** pada ketiga run. Tombol menampilkan
+  `Memproses…` sebelum respons server dan tidak dapat diaktifkan ulang selama request masih
+  berjalan. INP tetap <= 200 ms; median diprediksi **< 100 ms** setelah analitik dikeluarkan
+  dari jalur kritis. Event `begin_checkout` tetap terkirim satu kali untuk transaksi tersebut.
+- **Trade-off:** pengguna tidak dapat sengaja membuat beberapa pesanan identik dengan klik
+  cepat; mereka harus menunggu request pertama selesai lalu menekan lagi. Ini dipilih sebagai
+  *user error protection* yang tepat untuk operasi finansial. Guard klien mencegah duplikasi
+  dari UI ini tetapi bukan idempotensi lintas retry jaringan/perangkat; solusi menyeluruh
+  memerlukan idempotency key di server, sedangkan `server.js` berada di luar ruang lingkup.
+- **Alternatif yang dipertimbangkan dan alasan tidak dipilih:** debounce klik ditolak karena
+  hanya menunda eksekusi dan masih dapat mengirim beberapa request setelah jeda. Menonaktifkan
+  tombol setelah `fetch` selesai juga terlambat. Perubahan server ditolak karena berkas itu
+  tidak boleh diubah.
+
+### Sesudah perbaikan
+
+- **Hash commit perbaikan:** belum ada.
+- **Hasil ukur (median 3 kali):** belum diukur.
+- **Prediksi vs kenyataan:** diisi setelah tiga run S3 sesudah.
+- **Efek samping yang muncul:** diisi setelah pengujian regresi.
