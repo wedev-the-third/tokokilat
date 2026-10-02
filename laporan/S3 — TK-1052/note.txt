@@ -1,0 +1,161 @@
+{
+  "waktu": "2026-10-02T05:44:12.446Z",
+  "jumlahLongTask": 5,
+  "longTaskTerlama": 101,
+  "totalBlokir": 126,
+  "jumlahInteraksi": 4,
+  "inp": 112,
+  "inpRinci": {
+    "durasi": 112,
+    "jenis": "pointerup",
+    "target": "?",
+    "tundaInput": 13,
+    "proses": 0,
+    "presentasi": 99
+  },
+  "limaInteraksiTerlambat": [
+    {
+      "durasi": 112,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 13,
+      "proses": 0,
+      "presentasi": 99
+    },
+    {
+      "durasi": 112,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 17,
+      "proses": 0,
+      "presentasi": 96
+    },
+    {
+      "durasi": 104,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 15,
+      "proses": 0,
+      "presentasi": 89
+    },
+    {
+      "durasi": 32,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 11,
+      "proses": 0,
+      "presentasi": 21
+    }
+  ],
+  "cls": 0,
+  "frameLambat": 85,
+  "frameTerburuk": 12899
+}
+
+{
+  "waktu": "2026-10-02T05:48:35.524Z",
+  "jumlahLongTask": 3,
+  "longTaskTerlama": 96,
+  "totalBlokir": 98,
+  "jumlahInteraksi": 4,
+  "inp": 112,
+  "inpRinci": {
+    "durasi": 112,
+    "jenis": "pointerup",
+    "target": "?",
+    "tundaInput": 15,
+    "proses": 0,
+    "presentasi": 97
+  },
+  "limaInteraksiTerlambat": [
+    {
+      "durasi": 112,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 15,
+      "proses": 0,
+      "presentasi": 97
+    },
+    {
+      "durasi": 104,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 10,
+      "proses": 0,
+      "presentasi": 94
+    },
+    {
+      "durasi": 96,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 13,
+      "proses": 0,
+      "presentasi": 83
+    },
+    {
+      "durasi": 40,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 10,
+      "proses": 0,
+      "presentasi": 30
+    }
+  ],
+  "cls": 0,
+  "frameLambat": 28,
+  "frameTerburuk": 117
+}
+
+{
+  "waktu": "2026-10-02T05:57:08.574Z",
+  "jumlahLongTask": 4,
+  "longTaskTerlama": 97,
+  "totalBlokir": 115,
+  "jumlahInteraksi": 4,
+  "inp": 112,
+  "inpRinci": {
+    "durasi": 112,
+    "jenis": "pointerup",
+    "target": "?",
+    "tundaInput": 12,
+    "proses": 0,
+    "presentasi": 101
+  },
+  "limaInteraksiTerlambat": [
+    {
+      "durasi": 112,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 12,
+      "proses": 0,
+      "presentasi": 101
+    },
+    {
+      "durasi": 104,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 14,
+      "proses": 0,
+      "presentasi": 90
+    },
+    {
+      "durasi": 96,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 13,
+      "proses": 0,
+      "presentasi": 83
+    },
+    {
+      "durasi": 88,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 32,
+      "proses": 0,
+      "presentasi": 56
+    }
+  ],
+  "cls": 0,
+  "frameLambat": 87,
+  "frameTerburuk": 150
+}

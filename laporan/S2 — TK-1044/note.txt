@@ -1,0 +1,121 @@
+{
+  "waktu": "2026-10-02T01:58:07.547Z",
+  "jumlahLongTask": 73,
+  "longTaskTerlama": 122,
+  "totalBlokir": 938,
+  "jumlahInteraksi": 2,
+  "inp": 112,
+  "inpRinci": {
+    "durasi": 112,
+    "jenis": "pointerup",
+    "target": "?",
+    "tundaInput": 24,
+    "proses": 0,
+    "presentasi": 88
+  },
+  "limaInteraksiTerlambat": [
+    {
+      "durasi": 112,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 24,
+      "proses": 0,
+      "presentasi": 88
+    },
+    {
+      "durasi": 48,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 27,
+      "proses": 0,
+      "presentasi": 21
+    }
+  ],
+  "cls": 0,
+  "frameLambat": 424,
+  "frameTerburuk": 74296
+}
+
+{
+  "waktu": "2026-10-02T03:13:48.000Z",
+  "jumlahLongTask": 3,
+  "longTaskTerlama": 121,
+  "totalBlokir": 74,
+  "jumlahInteraksi": 2,
+  "inp": 152,
+  "inpRinci": {
+    "durasi": 152,
+    "jenis": "pointerup",
+    "target": "?",
+    "tundaInput": 14,
+    "proses": 0,
+    "presentasi": 138
+  },
+  "limaInteraksiTerlambat": [
+    {
+      "durasi": 152,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 14,
+      "proses": 0,
+      "presentasi": 138
+    },
+    {
+      "durasi": 40,
+      "jenis": "click",
+      "target": "#au-reset",
+      "tundaInput": 17,
+      "proses": 0,
+      "presentasi": 23
+    }
+  ],
+  "cls": 0,
+  "frameLambat": 56,
+  "frameTerburuk": 217
+}
+
+{
+  "waktu": "2026-10-02T03:20:46.678Z",
+  "jumlahLongTask": 108,
+  "longTaskTerlama": 126,
+  "totalBlokir": 2570,
+  "jumlahInteraksi": 3,
+  "inp": 160,
+  "inpRinci": {
+    "durasi": 160,
+    "jenis": "click",
+    "target": "#au-reset",
+    "tundaInput": 138,
+    "proses": 0,
+    "presentasi": 22
+  },
+  "limaInteraksiTerlambat": [
+    {
+      "durasi": 160,
+      "jenis": "click",
+      "target": "#au-reset",
+      "tundaInput": 138,
+      "proses": 0,
+      "presentasi": 22
+    },
+    {
+      "durasi": 136,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 4,
+      "proses": 0,
+      "presentasi": 132
+    },
+    {
+      "durasi": 120,
+      "jenis": "click",
+      "target": "#au-salin",
+      "tundaInput": 105,
+      "proses": 1,
+      "presentasi": 15
+    }
+  ],
+  "cls": 0,
+  "frameLambat": 181,
+  "frameTerburuk": 317
+}
