@@ -8,6 +8,14 @@ const KUNCI_RIWAYAT = 'tk_riwayat';
 
 const KONFIG = { maksPerProduk: 99, mataUang: 'IDR', sumber: 'web-flashsale-1212' };
 
+// Jalankan pekerjaan sekunder pada task setelah browser mendapat kesempatan
+// menggambar perubahan UI dari interaksi saat ini.
+function setelahPaint(aksi) {
+  requestAnimationFrame(() => {
+    setTimeout(aksi, 0);
+  });
+}
+
 function bacaKeranjang() {
   return JSON.parse(localStorage.getItem(KUNCI_KERANJANG) || '[]');
 }
@@ -68,21 +76,17 @@ function gambarPanel() {
 export function tambahKeKeranjang(produk, tombol) {
   const konfig = salinDalam(KONFIG);
   const keranjang = bacaKeranjang();
-  const riwayat = bacaRiwayat();
 
-  const ada = keranjang.find((item) => item.id === produk.id);
-  if (ada) ada.jumlah = Math.min(ada.jumlah + 1, konfig.maksPerProduk);
-  else keranjang.push({ id: produk.id, nama: produk.nama, harga: hargaSetelahDiskon(produk), jumlah: 1 });
-
-  riwayat.push({ t: Date.now(), jenis: 'keranjang', id: produk.id, nama: produk.nama, kategori: produk.kategori, harga: produk.harga });
-
-  // Tim data minta konteks selengkap mungkin di setiap event.
-  window.Lacak.kirim('add_to_cart', { produk, keranjang, riwayat, sumber: konfig.sumber });
+  let item = keranjang.find((isi) => isi.id === produk.id);
+  if (item) item.jumlah = Math.min(item.jumlah + 1, konfig.maksPerProduk);
+  else {
+    item = { id: produk.id, nama: produk.nama, harga: hargaSetelahDiskon(produk), jumlah: 1 };
+    keranjang.push(item);
+  }
 
   simpanKeranjang(keranjang);
-  simpanRiwayat(riwayat);
 
-  // Data sudah aman tersimpan, baru tampilan diperbarui.
+  // Umpan balik utama selesai sebelum riwayat besar dan SDK diproses.
   perbaruiLencana();
   tombol.textContent = 'Ditambahkan ✓';
   tombol.classList.add('sudah');
@@ -91,6 +95,27 @@ export function tambahKeKeranjang(produk, tombol) {
     tombol.classList.remove('sudah');
   }, 1500);
   tampilkanToast('Ditambahkan ke keranjang: ' + produk.nama);
+
+  setelahPaint(() => {
+    const riwayat = bacaRiwayat();
+    riwayat.push({ t: Date.now(), jenis: 'keranjang', id: produk.id, nama: produk.nama, kategori: produk.kategori, harga: produk.harga });
+    simpanRiwayat(riwayat);
+
+    if (window.Lacak) {
+      window.Lacak.kirim('add_to_cart', {
+        produk: {
+          id: produk.id,
+          nama: produk.nama,
+          kategori: produk.kategori,
+          harga: hargaSetelahDiskon(produk),
+        },
+        jumlahProduk: item.jumlah,
+        totalItem: keranjang.reduce((total, isi) => total + isi.jumlah, 0),
+        jumlahRiwayat: riwayat.length,
+        sumber: konfig.sumber,
+      });
+    }
+  });
 }
 
 export async function beliSekarang(produk, tombol) {
