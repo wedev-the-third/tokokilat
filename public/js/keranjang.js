@@ -8,12 +8,22 @@ const KUNCI_RIWAYAT = 'tk_riwayat';
 
 const KONFIG = { maksPerProduk: 99, mataUang: 'IDR', sumber: 'web-flashsale-1212' };
 
+// Guard per produk: satu checkout boleh berjalan untuk setiap produk.
+const pesananDiproses = new Set();
+
 // Jalankan pekerjaan sekunder pada task setelah browser mendapat kesempatan
 // menggambar perubahan UI dari interaksi saat ini.
 function setelahPaint(aksi) {
   requestAnimationFrame(() => {
     setTimeout(aksi, 0);
   });
+}
+
+function pulihkanTombol(tombol, produkId) {
+  pesananDiproses.delete(produkId);
+  tombol.disabled = false;
+  tombol.removeAttribute('aria-busy');
+  tombol.textContent = 'Beli sekarang';
 }
 
 function bacaKeranjang() {
@@ -119,27 +129,62 @@ export function tambahKeKeranjang(produk, tombol) {
 }
 
 export async function beliSekarang(produk, tombol) {
-  const konfig = salinDalam(KONFIG);
-  const riwayat = bacaRiwayat();
-  riwayat.push({ t: Date.now(), jenis: 'beli', id: produk.id, nama: produk.nama, kategori: produk.kategori, harga: produk.harga });
-  window.Lacak.kirim('begin_checkout', { produk, riwayat, sumber: konfig.sumber });
-  simpanRiwayat(riwayat);
+  if (pesananDiproses.has(produk.id)) return;
 
-  const respons = await fetch('/api/pesanan', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ produkId: produk.id, nama: produk.nama }),
+  pesananDiproses.add(produk.id);
+  tombol.disabled = true;
+  tombol.setAttribute('aria-busy', 'true');
+  tombol.textContent = 'Memproses…';
+
+  setelahPaint(() => {
+    const riwayat = bacaRiwayat();
+    riwayat.push({ t: Date.now(), jenis: 'beli', id: produk.id, nama: produk.nama, kategori: produk.kategori, harga: produk.harga });
+    simpanRiwayat(riwayat);
+
+    if (window.Lacak) {
+      window.Lacak.kirim('begin_checkout', {
+        produk: {
+          id: produk.id,
+          nama: produk.nama,
+          kategori: produk.kategori,
+          harga: hargaSetelahDiskon(produk),
+        },
+        jumlahRiwayat: riwayat.length,
+        sumber: KONFIG.sumber,
+      });
+    }
   });
-  const pesanan = await respons.json();
 
-  tombol.textContent = 'Dipesan ✓';
-  setTimeout(() => { tombol.textContent = 'Beli sekarang'; }, 1500);
-  tampilkanToast('Pesanan ' + pesanan.id + ' dibuat: ' + produk.nama);
-  perbaruiLencanaPesanan();
+  try {
+    const respons = await fetch('/api/pesanan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ produkId: produk.id, nama: produk.nama }),
+    });
+
+    if (!respons.ok) throw new Error('Pesanan gagal dibuat: HTTP ' + respons.status);
+
+    const pesanan = await respons.json();
+    tombol.textContent = 'Dipesan ✓';
+    tampilkanToast('Pesanan ' + pesanan.id + ' dibuat: ' + produk.nama);
+
+    // Pesanan sudah berhasil dibuat. Kegagalan refresh lencana tidak boleh
+    // membuat pengguna mengira POST gagal lalu mencoba memesan lagi.
+    perbaruiLencanaPesanan().catch((error) => {
+      console.error('Gagal memperbarui lencana pesanan:', error);
+    });
+
+    setTimeout(() => pulihkanTombol(tombol, produk.id), 1500);
+  } catch (error) {
+    console.error(error);
+    tampilkanToast('Pesanan gagal dibuat. Silakan coba lagi.');
+    pulihkanTombol(tombol, produk.id);
+  }
 }
 
 export async function perbaruiLencanaPesanan() {
   const respons = await fetch('/api/pesanan');
+  if (!respons.ok) throw new Error('Gagal mengambil pesanan: HTTP ' + respons.status);
   const pesanan = await respons.json();
   $('#lencana-pesanan').textContent = pesanan.length;
   return pesanan;
@@ -162,12 +207,19 @@ export function pasangKeranjang() {
   });
 
   $('#tombol-pesanan').addEventListener('click', async () => {
-    const pesanan = await perbaruiLencanaPesanan();
-    if (pesanan.length === 0) return tampilkanToast('Belum ada pesanan. Tekan "Beli sekarang" pada produk untuk memesan.');
-    const terakhir = pesanan.slice(-3).map((p) => p.id + ' (produk #' + p.produkId + ')').join(', ');
-    tampilkanToast(pesanan.length + ' pesanan. Terakhir: ' + terakhir);
+    try {
+      const pesanan = await perbaruiLencanaPesanan();
+      if (pesanan.length === 0) return tampilkanToast('Belum ada pesanan. Tekan "Beli sekarang" pada produk untuk memesan.');
+      const terakhir = pesanan.slice(-3).map((p) => p.id + ' (produk #' + p.produkId + ')').join(', ');
+      tampilkanToast(pesanan.length + ' pesanan. Terakhir: ' + terakhir);
+    } catch (error) {
+      console.error(error);
+      tampilkanToast('Daftar pesanan gagal dimuat.');
+    }
   });
 
   perbaruiLencana();
-  perbaruiLencanaPesanan();
+  perbaruiLencanaPesanan().catch((error) => {
+    console.error('Gagal memperbarui lencana pesanan:', error);
+  });
 }
