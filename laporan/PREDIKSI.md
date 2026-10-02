@@ -190,10 +190,25 @@ bagian "sebelum" setelah hasilnya diketahui; bila prediksi meleset, jelaskan di 
 
 ### Sesudah perbaikan
 
-- **Hash commit perbaikan:** belum ada.
-- **Hasil ukur (median 3 kali):** belum diukur.
-- **Prediksi vs kenyataan:** diisi setelah tiga run S2 sesudah.
-- **Efek samping yang muncul:** diisi setelah pengujian regresi.
+- **Hash commit perbaikan:** `817ab1d`.
+- **Hasil ukur (median 3 kali):** processing handler turun dari **63,6 ms menjadi
+  2,1 ms**, membuktikan pembacaan/penulisan riwayat dan SDK sudah keluar dari jalur
+  kritis klik. Durasi interaksi produk berubah dari **133 ms menjadi 199 ms** (alat
+  ukur: median 200 ms), sehingga masih tepat di batas target INP <= 200 ms. Long task
+  terlama berubah dari median **122 ms menjadi 145 ms**, jadi target tidak ada long
+  task > 100 ms belum tercapai. Run sesudah pertama memiliki outlier 516 ms; median
+  dipakai sesuai protokol.
+- **Prediksi vs kenyataan:** **SEBAGIAN dan target prediksi meleset.** Prediksi bahwa
+  pekerjaan langsung klik turun benar, bahkan processing menyusut sekitar 30 kali.
+  Prediksi interaksi < 100 ms dan tidak ada long task > 100 ms salah: paint masih
+  tertunda oleh pekerjaan lain di main thread, terutama interval `promo.js`, pemeriksaan
+  gulir, serta task riwayat/SDK yang tetap berat walaupun sudah terjadi setelah umpan
+  balik dijadwalkan. Hasil ini menunjukkan bahwa memindahkan pekerjaan keluar dari
+  handler tidak otomatis menghilangkan seluruh kontensi main thread.
+- **Efek samping yang muncul:** event `add_to_cart` dan riwayat menjadi *eventually
+  consistent* karena diproses setelah kesempatan paint. Keranjang utama tetap disimpan
+  sinkron. Bila tab ditutup pada celah yang sangat pendek tersebut, event analitik atau
+  entri riwayat terakhir berpotensi belum tersimpan.
 
 ---
 
@@ -244,7 +259,22 @@ bagian "sebelum" setelah hasilnya diketahui; bila prediksi meleset, jelaskan di 
 
 ### Sesudah perbaikan
 
-- **Hash commit perbaikan:** belum ada.
-- **Hasil ukur (median 3 kali):** belum diukur.
-- **Prediksi vs kenyataan:** diisi setelah tiga run S3 sesudah.
-- **Efek samping yang muncul:** diisi setelah pengujian regresi.
+- **Hash commit perbaikan:** `2ebae43`.
+- **Hasil ukur:** trace sesudah yang direkam merupakan **uji pesanan berurutan**, bukan
+  tiga klik cepat tanpa jeda seperti skenario baku S3. Penguji sengaja menunggu animasi
+  selesai dan tombol aktif kembali sebelum membuat pesanan berikutnya; karena itu setiap
+  run secara benar berisi 3 POST, 3 respons 201, 3 GET penyegaran, dan 3 pesanan.
+  Pada run pertama terdapat burst awal tiga upaya tap dalam kurang dari satu detik:
+  hanya tap pertama menjadi event `click` dan POST; dua tap selama tombol disabled tidak
+  menghasilkan click/POST. Ini membuktikan guard bekerja pada jendela transaksi, tetapi
+  tidak menghasilkan median tiga run untuk skenario baku.
+- **Prediksi vs kenyataan:** **TEPAT secara mekanisme, belum terverifikasi penuh menurut
+  protokol.** Guard sinkron menolak upaya tambahan selama request berjalan dan tombol
+  memberi status `Memproses…`. Tiga pesanan pada trace bukan duplikasi: klik kedua dan
+  ketiga dilakukan setelah guard dilepas, sehingga merupakan tiga tindakan pembelian
+  terpisah. Klaim target "3 klik cepat -> 1 pesanan" hanya didukung satu burst di trace
+  serta uji otomatis, bukan tiga run baku; keterbatasan ini dipertahankan di laporan.
+- **Efek samping yang muncul:** pengguna harus menunggu transaksi pertama selesai sebelum
+  sengaja membeli produk yang sama lagi. Setelah tombol dipulihkan, pesanan berikutnya
+  tetap dapat dibuat, sebagaimana dibuktikan oleh uji berurutan. Guard ini tetap hanya
+  melindungi UI saat ini dan bukan idempotensi lintas perangkat atau retry jaringan.

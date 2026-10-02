@@ -18,8 +18,8 @@ dan penyimpangan apa pun dari protokol di TUGAS.md bagian 7.
 | S0 | Jumlah permintaan gambar dalam 10 dtk pertama | | | sebanding dengan yang terlihat | |
 | S1 | INP | | | <= 200 ms | |
 | S1 | Long task terlama | | | <= 100 ms | |
-| S2 | INP | | | <= 200 ms | |
-| S3 | Jumlah pesanan dari 3 klik | | | 1 | |
+| S2 | INP interaksi produk (median trace) | 133 ms | 199 ms | <= 200 ms | Ya, tepat di batas |
+| S3 | Jumlah pesanan dari 3 klik cepat | 3 | tidak tersedia 3 run baku; uji berurutan = 3 tindakan/3 pesanan | 1 | Belum dapat dinilai penuh |
 | S4 | INP / progres tergambar bertahap? | | | | |
 | S5 | Frame > 50 ms per 10 dtk | | | <= 2 | |
 | S6 | Frame > 50 ms per 10 dtk | | | <= 2 | |
@@ -116,6 +116,49 @@ berkas trace `laporan/trace/` (median 3 run menyusul); rinci di `laporan/trace/C
 - **Hasil:** CLS S0 sesudah (bagian P1 masuk) = **0,472**, seluruh sisa shift dari banner —
   sesuai prediksi P-02 bahwa penilaian target 0,1 menunggu placeholder banner dari P2.
 
+### T-04: Umpan balik tambah ke keranjang tertahan pekerjaan sekunder
+
+- **Tiket terkait:** TK-1044.
+- **Bukti:** baseline S2 tiga run menghasilkan median interaksi produk **133 ms**, processing
+  handler **63,6 ms**, dan long task terlama **122 ms**. Sesudah commit `817ab1d`, processing
+  handler turun menjadi **2,1 ms**, tetapi interaksi total menjadi **199 ms** dan long task
+  terlama **145 ms**. Rincian ada di `laporan/trace/CATATAN-P3.md`.
+- **Akar masalah dan mekanismenya:** handler asli membaca serta menulis riwayat 9.000+ entri
+  dan memanggil SDK dengan seluruh produk, keranjang, dan riwayat sebelum mengubah lencana,
+  tombol, serta toast. Semua berada dalam task klik yang sama sehingga browser belum dapat
+  menggambar umpan balik. Perbaikan menyimpan keranjang dan mengubah UI lebih dahulu, lalu
+  menjadwalkan riwayat serta event analitik ringkas setelah kesempatan paint.
+- **Kualitas yang terdampak:** *performance efficiency — time behaviour* serta *interaction
+  capability — operability* dan *user error protection*; tombol tanpa umpan balik mendorong
+  klik berulang yang tidak disengaja.
+- **Trade-off dan hasil:** jalur langsung handler membaik sekitar 30 kali dan INP memenuhi
+  target tepat di batas, tetapi prediksi < 100 ms dan target long task tidak tercapai. Task
+  SDK/riwayat tetap berat setelah paint dijadwalkan, dan `promo.js` serta pemeriksaan gulir
+  masih berkontensi di main thread. Riwayat/analitik juga menjadi *eventually consistent*.
+
+### T-05: Tidak ada guard pada transaksi "Beli sekarang"
+
+- **Tiket terkait:** TK-1052.
+- **Bukti baseline:** ketiga run S3 masing-masing menghasilkan **3 POST**, **3 respons 201**,
+  dan **3 pesanan** dari tiga klik cepat. Median INP 112 ms menunjukkan masalah utamanya
+  bukan kecepatan respons, melainkan aturan transaksi.
+- **Akar masalah dan mekanismenya:** fungsi asli tidak memiliki state *in-flight* dan baru
+  mengubah teks tombol setelah POST selesai sekitar 350 ms kemudian. Tiga invocation dapat
+  berjalan bersamaan dan server menganggap semuanya permintaan sah.
+- **Perbaikan:** commit `2ebae43` menambahkan guard per produk, `disabled`, `aria-busy`, dan
+  status `Memproses…` sebelum operasi asynchronous. Error POST memulihkan tombol; kegagalan
+  GET penyegaran lencana tidak lagi salah dilaporkan sebagai kegagalan membuat pesanan.
+- **Hasil dan keterbatasan:** trace sesudah yang tersedia adalah uji tiga pembelian
+  berurutan—penguji menunggu tombol aktif kembali—sehingga 3 POST/3 pesanan merupakan hasil
+  benar, bukan duplikasi. Pada burst awal run pertama, dua tap selama tombol disabled tidak
+  menghasilkan click/POST, sehingga mekanisme guard terbukti. Namun tiga run baku sesudah
+  tidak tersedia; target "3 klik cepat -> 1 pesanan" tidak diklaim telah dibuktikan dengan
+  median trace.
+- **Kualitas yang terdampak:** *interaction capability — user error protection,
+  self-descriptiveness,* dan *operability*, serta *performance efficiency — resource
+  utilization*. Guard klien tidak menggantikan idempotency key server untuk retry lintas
+  perangkat.
+
 ## 5. Dugaan yang ternyata keliru
 Dugaan dari catatan serah terima, tiket, atau tim sendiri yang terbantah pengukuran. Sertakan angkanya.
 
@@ -141,5 +184,21 @@ Masalah yang tersisa, risiko, dan usulan untuk tim lain (backend, vendor SDK, de
 3. **Koordinasi P2**: placeholder tinggi banner sebelum `/api/promo` selesai — sisa CLS 0,472
    ada di sana; tanpa itu target CLS 0,1 tidak mungkin tercapai tim.
 
+**Kontribusi P3:**
+1. S2 memenuhi target INP hanya tepat di batas dan long task masih > 100 ms. Pengurangan
+   processing handler sudah terukur, tetapi optimasi lebih lanjut harus mempertimbangkan SDK
+   vendor serta pekerjaan P2 yang tetap aktif; jangan menyatakan seluruh masalah selesai.
+2. Bukti S3 sesudah menyimpang dari skenario baku karena klik diberi jeda sampai tombol aktif
+   kembali. Trace tetap berguna sebagai bukti bahwa guard memblokir tap saat transaksi aktif
+   dan pembelian baru tetap mungkin sesudahnya, tetapi median target S3 belum tersedia.
+3. Idempotensi menyeluruh memerlukan dukungan server. Perbaikan saat ini hanya mencegah
+   duplikasi dari UI pada satu halaman, sesuai batas karena `server.js` tidak boleh diubah.
+
 ## 7. Pernyataan penggunaan AI dan pembagian kerja
-Alat AI yang dipakai dan untuk apa. Kontribusi tiap anggota.
+
+P3 menggunakan OpenAI Codex untuk membantu membaca trace, menghitung median, menyusun
+hipotesis, dan mengusulkan implementasi. P3 memeriksa kembali usulan tersebut terhadap source,
+trace Performance, Network, dan hasil tiga run. Codex juga membuat uji otomatis untuk guard
+checkout; uji itu diperlakukan sebagai bukti pendukung dan tidak menggantikan trace protokol.
+Kontribusi P3 mencakup diagnosis serta perbaikan TK-1044/TK-1052 dan dokumentasi hasilnya.
+Nama anggota dan pembagian kontribusi P1/P2 perlu dilengkapi tim.

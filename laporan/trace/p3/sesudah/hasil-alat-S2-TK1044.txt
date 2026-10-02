@@ -1,0 +1,113 @@
+{
+  "waktu": "2026-10-02T06:47:31.147Z",
+  "jumlahLongTask": 19,
+  "longTaskTerlama": 516,
+  "totalBlokir": 1232,
+  "jumlahInteraksi": 2,
+  "inp": 280,
+  "inpRinci": {
+    "durasi": 280,
+    "jenis": "click",
+    "target": ".tombol-tambah",
+    "tundaInput": 144,
+    "proses": 2,
+    "presentasi": 134
+  },
+  "limaInteraksiTerlambat": [
+    {
+      "durasi": 280,
+      "jenis": "click",
+      "target": ".tombol-tambah",
+      "tundaInput": 144,
+      "proses": 2,
+      "presentasi": 134
+    },
+    {
+      "durasi": 40,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 2,
+      "proses": 0,
+      "presentasi": 38
+    }
+  ],
+  "cls": 0,
+  "frameLambat": 49,
+  "frameTerburuk": 533
+}
+
+{
+  "waktu": "2026-10-02T06:50:23.353Z",
+  "jumlahLongTask": 41,
+  "longTaskTerlama": 116,
+  "totalBlokir": 649,
+  "jumlahInteraksi": 2,
+  "inp": 176,
+  "inpRinci": {
+    "durasi": 176,
+    "jenis": "pointerup",
+    "target": "?",
+    "tundaInput": 3,
+    "proses": 0,
+    "presentasi": 173
+  },
+  "limaInteraksiTerlambat": [
+    {
+      "durasi": 176,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 3,
+      "proses": 0,
+      "presentasi": 173
+    },
+    {
+      "durasi": 40,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 4,
+      "proses": 0,
+      "presentasi": 36
+    }
+  ],
+  "cls": 0,
+  "frameLambat": 48,
+  "frameTerburuk": 217
+}
+
+{
+  "waktu": "2026-10-02T06:52:51.063Z",
+  "jumlahLongTask": 31,
+  "longTaskTerlama": 145,
+  "totalBlokir": 669,
+  "jumlahInteraksi": 2,
+  "inp": 200,
+  "inpRinci": {
+    "durasi": 200,
+    "jenis": "pointerup",
+    "target": "?",
+    "tundaInput": 3,
+    "proses": 0,
+    "presentasi": 197
+  },
+  "limaInteraksiTerlambat": [
+    {
+      "durasi": 200,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 3,
+      "proses": 0,
+      "presentasi": 197
+    },
+    {
+      "durasi": 64,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 45,
+      "proses": 0,
+      "presentasi": 19
+    }
+  ],
+  "cls": 0,
+  "frameLambat": 59,
+  "frameTerburuk": 533
+}

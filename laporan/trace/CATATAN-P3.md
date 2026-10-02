@@ -3,8 +3,9 @@
 Catatan ini memuat baseline S2 (TK-1044) dan S3 (TK-1052) sebelum kode P3
 diperbaiki. Baseline direkam dari commit awal `113af2b`; kode perbaikan belum
 diterapkan. Angka utama diambil dari tiga rekaman panel Performance dan keluaran
-alat ukur. Hasil akhir sesudah perbaikan akan ditambahkan setelah prediksi
-di-commit dan implementasi selesai.
+alat ukur. Pengukuran sesudah TK-1044 mengikuti tiga run, sedangkan pengukuran
+sesudah TK-1052 dicatat sebagai uji pesanan berurutan karena penguji menunggu
+tombol aktif kembali di antara pesanan; penyimpangan ini dijelaskan apa adanya.
 
 ## Lingkungan dan metode
 
@@ -125,24 +126,85 @@ pesanan berbeda.
 - *Performance efficiency — resource utilization:* tiga POST dan tiga GET
   dilakukan untuk satu niat pembelian.
 
+## Hasil sesudah perbaikan
+
+### S2 — TK-1044
+
+Perbaikan: commit `817ab1d`. Riwayat 9.000+ entri dan analitik dipindahkan ke
+task setelah kesempatan paint, sedangkan payload `add_to_cart` diringkas.
+
+| Run | Durasi interaksi produk dari trace | Processing handler dari trace | Long task terlama dari alat ukur |
+|---|---:|---:|---:|
+| 1 | 283 ms | 1,9 ms | 516 ms |
+| 2 | 173 ms | 2,1 ms | 116 ms |
+| 3 | 199 ms | 2,3 ms | 145 ms |
+| **Median** | **199 ms** | **2,1 ms** | **145 ms** |
+
+Dibanding baseline, processing handler turun dari median 63,6 ms menjadi 2,1 ms.
+Hal ini sesuai mekanisme perbaikan: parse/stringify riwayat dan SDK tidak lagi
+berada di dalam jalur langsung handler. Namun durasi interaksi total berubah dari
+133 ms menjadi 199 ms dan long task median berubah dari 122 ms menjadi 145 ms.
+Target INP <= 200 ms tercapai tepat di batas, sedangkan target tidak ada long task
+> 100 ms belum tercapai. Trace menunjukkan waktu presentasi masih dipengaruhi
+kontensi main thread dari `promo.js`, pemeriksaan gulir, serta task riwayat/SDK
+yang tetap berat setelah paint dijadwalkan. Prediksi < 100 ms dinyatakan meleset.
+
+### S3 — TK-1052
+
+Perbaikan: commit `2ebae43`. Tombol diberi guard per produk, langsung disabled
+dan berstatus `Memproses…`, lalu dipulihkan setelah transaksi selesai.
+
+Tiga rekaman sesudah bukan tiga run skenario baku "tiga klik secepat mungkin".
+Penguji sengaja menunggu animasi selesai dan tombol aktif kembali sebelum membuat
+pesanan selanjutnya. Oleh karena itu, setiap rekaman berisi tiga tindakan pembelian
+berurutan yang sah:
+
+| Run | POST `/api/pesanan` | Respons `201` | GET penyegaran | Pesanan |
+|---|---:|---:|---:|---:|
+| 1 | 3 | 3 | 3 | 3 |
+| 2 | 3 | 3 | 3 | 3 |
+| 3 | 3 | 3 | 3 | 3 |
+
+Angka tersebut tidak menunjukkan regresi atau kegagalan guard. Pada run pertama,
+trace memperlihatkan burst awal tiga upaya tap sekitar detik 18,3–19,0. Hanya tap
+pertama menjadi `click` dan menghasilkan POST; dua tap ketika tombol disabled
+tidak menghasilkan click/POST. Klik berikutnya baru terjadi sekitar detik 27,1
+dan 29,8, setelah tombol dipulihkan, sehingga masing-masing memang boleh membuat
+pesanan baru. Run kedua dan ketiga juga memiliki jarak sekitar 2,5–2,7 detik
+antar-click.
+
+Kesimpulan terbatas: guard terbukti bekerja selama transaksi aktif dan pembelian
+berulang secara sengaja tetap berfungsi. Akan tetapi, karena tidak tersedia tiga
+run skenario baku sesudah, median target "tiga klik cepat menghasilkan satu
+pesanan" tidak diklaim tercapai berdasarkan trace ini. Uji otomatis terpisah
+memastikan tiga invocation cepat pada fungsi hanya memulai satu POST, tetapi bukti
+tersebut bukan pengganti trace Performance yang diwajibkan protokol.
+
 ## Inventaris bukti mentah
 
 ### S2
 
-- `laporan/S2 — TK-1044/Trace-20261002T085432.json.gz` — run 1.
-- `laporan/S2 — TK-1044/Trace-20261002T101250.json.gz` — run 2.
-- `laporan/S2 — TK-1044/Trace-20261002T102014.json.gz` — run 3.
-- `laporan/S2 — TK-1044/note.txt` — keluaran alat ukur tiga run.
+- `laporan/trace/p3/sebelum/trace-S2-TK1044-sebelum-1.json.gz` — baseline run 1.
+- `laporan/trace/p3/sebelum/trace-S2-TK1044-sebelum-2.json.gz` — baseline run 2.
+- `laporan/trace/p3/sebelum/trace-S2-TK1044-sebelum-3.json.gz` — baseline run 3.
+- `laporan/trace/p3/sebelum/hasil-alat-S2-TK1044.txt` — keluaran alat ukur baseline.
+- `laporan/trace/p3/sesudah/trace-S2-TK1044-sesudah-1.json.gz` — sesudah run 1.
+- `laporan/trace/p3/sesudah/trace-S2-TK1044-sesudah-2.json.gz` — sesudah run 2.
+- `laporan/trace/p3/sesudah/trace-S2-TK1044-sesudah-3.json.gz` — sesudah run 3.
+- `laporan/trace/p3/sesudah/hasil-alat-S2-TK1044.txt` — keluaran alat ukur sesudah.
 
 ### S3
 
-- `laporan/S3 — TK-1052/Trace-20261002T124326.json.gz` — run 1.
-- `laporan/S3 — TK-1052/Trace-20261002T124810.json.gz` — run 2.
-- `laporan/S3 — TK-1052/Trace-20261002T125643.json.gz` — run 3.
-- `laporan/S3 — TK-1052/note.txt` — keluaran alat ukur tiga run.
+- `laporan/trace/p3/sebelum/trace-S3-TK1052-sebelum-1.json.gz` — baseline run 1.
+- `laporan/trace/p3/sebelum/trace-S3-TK1052-sebelum-2.json.gz` — baseline run 2.
+- `laporan/trace/p3/sebelum/trace-S3-TK1052-sebelum-3.json.gz` — baseline run 3.
+- `laporan/trace/p3/sebelum/hasil-alat-S3-TK1052.txt` — keluaran alat ukur baseline.
+- `laporan/trace/p3/sesudah/trace-S3-TK1052-sesudah-1.json.gz` — sesudah uji berurutan 1.
+- `laporan/trace/p3/sesudah/trace-S3-TK1052-sesudah-2.json.gz` — sesudah uji berurutan 2.
+- `laporan/trace/p3/sesudah/trace-S3-TK1052-sesudah-3.json.gz` — sesudah uji berurutan 3.
+- `laporan/trace/p3/sesudah/hasil-alat-S3-TK1052.txt` — keluaran alat ukur sesudah.
 
 Versi `.json` tanpa kompresi adalah salinan dari trace yang sama dan tidak perlu
-dimasukkan ke Git bila versi `.json.gz` disimpan. Sebelum commit, berkas
-terkompresi sebaiknya dipindahkan ke `laporan/trace/` dan diberi nama baku sesuai
-protokol. Catatan ini belum berisi prediksi perbaikan; prediksi TK-1044 dan
-TK-1052 harus ditulis serta di-commit terpisah sebelum `keranjang.js` diubah.
+dimasukkan ke Git bila versi `.json.gz` disimpan. Prediksi TK-1044 dan TK-1052
+telah di-commit sebelum perbaikan pada `a488fdd`; hash perbaikannya masing-masing
+`817ab1d` dan `2ebae43`.
