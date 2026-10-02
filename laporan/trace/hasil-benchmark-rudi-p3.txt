@@ -1,0 +1,29 @@
+Perintah:
+node laporan/trace/bench-rudi-p3.mjs
+
+Lingkungan: Node v24.13.0, win32 x64, tanpa CPU throttling.
+Hasil ini adalah microbenchmark pembanding mekanisme, bukan pengganti trace Chrome.
+
+Data nyata:
+- Produk: 3000
+- Kategori unik: 8
+- Merek unik: 12
+
+Kategori:
+- querySelectorAll per pasangKaki: 56
+- pasangan diperiksa: 56
+- median seluruh pasangKaki: 0,8822 ms
+
+Pengurutan 12 merek:
+- perbandingan bubble sort: 66
+- median bubble sort: 0,0025 ms
+- median Array.prototype.sort: 0,0012 ms
+- selisih: 0,0013 ms
+
+SDK:
+- payload lama: 1.225.955 byte
+- payload ringkas: 186 byte
+- median JSON.stringify payload lama: 6,9422 ms
+- median JSON.stringify payload ringkas: 0,0008 ms
+- median Lacak.kirim payload lama: 52,5579 ms
+- median Lacak.kirim payload ringkas: 9,2659 ms

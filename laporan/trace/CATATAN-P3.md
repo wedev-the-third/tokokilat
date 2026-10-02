@@ -180,6 +180,50 @@ pesanan" tidak diklaim tercapai berdasarkan trace ini. Uji otomatis terpisah
 memastikan tiga invocation cepat pada fungsi hanya memulai satu POST, tetapi bukti
 tersebut bukan pengganti trace Performance yang diwajibkan protokol.
 
+## Uji dugaan Rudi untuk P3
+
+Benchmark dapat diulang dengan `node laporan/trace/bench-rudi-p3.mjs`. Skrip
+menjalankan implementasi `kategori.js` dan `util.js` yang asli dengan data 3.000
+produk dari generator `server.js`, serta memuat `public/vendor/lacak.min.js` tanpa
+mengubahnya. Operasi DOM dijalankan pada tiruan minimal, bukan mesin layout browser.
+Angka berikut adalah median microbenchmark Node v24.13.0 tanpa CPU throttling.
+Angka ini dipakai untuk membandingkan skala mekanisme, bukan sebagai pengganti
+trace Chrome 4x; bukti kategori yang paling kuat adalah jumlah operasinya yang
+deterministik.
+
+| Kandidat | Ukuran kerja nyata | Median |
+|---|---:|---:|
+| Seluruh `pasangKaki`, termasuk loop kategori | 8 kategori, 56 pasangan dan 56 `querySelectorAll` | 0,8822 ms |
+| `urutkanGelembung` | 12 merek, 66 perbandingan | 0,0025 ms |
+| `Array.prototype.sort` sebagai pembanding | 12 merek | 0,0012 ms |
+| `JSON.stringify` payload analitik lama | 1.225.955 byte | 6,9422 ms |
+| `JSON.stringify` payload ringkas | 186 byte | 0,0008 ms |
+| `Lacak.kirim` dengan payload lama | 1.225.955 byte | 52,5579 ms |
+| `Lacak.kirim` dengan payload ringkas | 186 byte | 9,2659 ms |
+
+Interpretasi:
+
+1. **Rudi #1 salah sebagai diagnosis prioritas.** Loop kategori memang berbentuk
+   O(k²), tetapi `k` adalah jumlah kategori, bukan 3.000 produk. Pada data nyata
+   `k = 8`, sehingga hanya ada 56 pasangan dan 56 query DOM. Bahkan seluruh
+   `pasangKaki`—termasuk agregasi 3.000 produk—bermedian 0,8822 ms. Kompleksitas
+   asimtotiknya benar, tetapi klaim bahwa inilah biang utama tidak didukung skala
+   input maupun pengukuran.
+2. **Rudi #3 salah sebagai prioritas optimasi.** Bubble sort memang O(m²), tetapi
+   hanya mengurutkan 12 merek satu kali: 66 perbandingan dan 0,0025 ms. Sort bawaan
+   menghemat sekitar 0,0013 ms, terlalu kecil untuk menjelaskan hang ratusan hingga
+   ribuan milidetik. Karena itu `util.js` sengaja tidak diubah.
+3. **Rudi #5 hanya benar pada bagian "SDK berat", tetapi kesimpulan "tidak boleh
+   disentuh" salah.** Berkas vendor tetap tidak diubah; aturan tugas mengizinkan
+   perubahan waktu, frekuensi, dan isi pemanggilan. Payload lama berukuran 1.225.955
+   byte dan `Lacak.kirim` bermedian 52,5579 ms, dibanding 186 byte dan 9,2659 ms
+   untuk payload ringkas. Commit `817ab1d` juga memindahkan pemanggilan setelah
+   kesempatan paint; processing handler S2 turun dari 63,6 menjadi 2,1 ms. Jadi
+   integrasi SDK dapat diperbaiki tanpa menghapus event atau mengedit vendor.
+
+Keluaran mentah dicatat di `laporan/trace/hasil-benchmark-rudi-p3.txt`. Hasil dapat
+bervariasi antarmesin; kardinalitas input dan jumlah operasi bersifat deterministik.
+
 ## Inventaris bukti mentah
 
 ### S2

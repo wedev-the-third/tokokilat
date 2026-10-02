@@ -167,6 +167,21 @@ Dugaan dari catatan serah terima, tiket, atau tim sendiri yang terbantah penguku
   sementara **3.000 permintaan gambar** dilepas halaman sendiri dan menghabiskan antrean unduhan
   (lihat T-02). Menambah server backend tidak akan mengubah apa pun.
 
+- **Rudi #1 — "loop O(n²) di `kategori.js` adalah biang utama"** (kontribusi P3): salah
+  sasaran. `n` nyata hanya **8 kategori**, bukan 3.000 produk: **56 pasangan** dan 56
+  `querySelectorAll`. Microbenchmark Node dengan DOM tiruan untuk seluruh `pasangKaki`,
+  termasuk agregasi 3.000 produk, bermedian **0,8822 ms**. Bentuk O(n²)-nya benar, tetapi
+  skalanya tidak menjelaskan hang.
+- **Rudi #3 — "bubble sort harus diganti quicksort"** (kontribusi P3): tidak material.
+  Fungsi hanya mengurutkan **12 merek** satu kali, yaitu **66 perbandingan**. Median bubble
+  sort **0,0025 ms**, sedangkan sort bawaan **0,0012 ms**; potensi hemat **0,0013 ms**.
+- **Rudi #5 — "SDK berat dan tidak boleh disentuh"** (kontribusi P3): bagian pertama benar,
+  tetapi kesimpulannya salah. Tanpa mengubah vendor, payload dipangkas dari **1.225.955 ke
+  186 byte** dan pemanggilan dijadwalkan setelah paint. Microbenchmark `Lacak.kirim` turun
+  dari **52,5579 menjadi 9,2659 ms**; processing handler S2 turun dari **63,6 menjadi 2,1 ms**.
+  Jadi titik integrasinya boleh dan perlu diubah sambil seluruh event tetap dikirim. Metode
+  dan keterbatasan microbenchmark ada di `laporan/trace/CATATAN-P3.md`.
+
 ## 6. Yang belum beres dan rekomendasi
 Masalah yang tersisa, risiko, dan usulan untuk tim lain (backend, vendor SDK, desain).
 
