@@ -145,7 +145,7 @@ bagian "sebelum" setelah hasilnya diketahui; bila prediksi meleset, jelaskan di 
 ## P-04: Tombol "+ Keranjang" terlambat memberi umpan balik (TK-1044)
 
 **Tiket terkait:** TK-1044 (Pak Anton — tombol tampak tidak bereaksi sehingga ditekan berulang kali)
-**Tanggal dan hash commit entri ini:** 2026-10-02, hash: `PREDIKSI_COMMIT_P3`.
+**Tanggal dan hash commit entri ini:** 2026-10-02, hash: `a488fdd`.
 
 ### Sebelum perbaikan
 
@@ -200,7 +200,7 @@ bagian "sebelum" setelah hasilnya diketahui; bila prediksi meleset, jelaskan di 
 ## P-05: Tiga klik cepat membuat tiga pesanan (TK-1052)
 
 **Tiket terkait:** TK-1052 (Mbak Sari — satu niat pembelian menghasilkan tiga pesanan)
-**Tanggal dan hash commit entri ini:** 2026-10-02, hash: `PREDIKSI_COMMIT_P3`.
+**Tanggal dan hash commit entri ini:** 2026-10-02, hash: `a488fdd`.
 
 ### Sebelum perbaikan
 
