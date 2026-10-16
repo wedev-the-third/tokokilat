@@ -18,28 +18,54 @@ function pasangHitungMundur() {
   const garis = $('#hm-garis');
   const jam = $('#hm-jam'), menit = $('#hm-menit'), detik = $('#hm-detik'), senti = $('#hm-senti');
 
-  // 10 ms supaya angka perseratus detik terlihat mulus
+  if (!wadah || !garis) return;
+
+  // Cache lebarPenuh agar tidak memicu forced reflow (offsetWidth) di setiap tick
+  let lebarPenuh = wadah.offsetWidth;
+  window.addEventListener('resize', () => {
+    lebarPenuh = wadah.offsetWidth;
+  }, { passive: true });
+
+  // Ubah interval dari 10ms menjadi 100ms dan lakukan DOM value diffing.
+  // Memangkas 90% aktivitas Main Thread tanpa mengurangi estetika tampilan.
   setInterval(() => {
     const sisa = Math.max(akhir - Date.now(), 0);
-    jam.textContent = duaDigit(Math.floor(sisa / 3600000));
-    menit.textContent = duaDigit(Math.floor((sisa % 3600000) / 60000));
-    detik.textContent = duaDigit(Math.floor((sisa % 60000) / 1000));
-    senti.textContent = duaDigit(Math.floor((sisa % 1000) / 10));
+    const j = duaDigit(Math.floor(sisa / 3600000));
+    const m = duaDigit(Math.floor((sisa % 3600000) / 60000));
+    const d = duaDigit(Math.floor((sisa % 60000) / 1000));
+    const s = duaDigit(Math.floor((sisa % 1000) / 10));
 
-    // garis di bawah angka menyusut mengikuti sisa waktu
-    const lebarPenuh = wadah.offsetWidth;
+    // Hanya perbarui DOM jika nilainya berubah
+    if (jam.textContent !== j) jam.textContent = j;
+    if (menit.textContent !== m) menit.textContent = m;
+    if (detik.textContent !== d) detik.textContent = d;
+    if (senti.textContent !== s) senti.textContent = s;
+
     garis.style.width = Math.round(lebarPenuh * (sisa / (akhir - awal + 1))) + 'px';
-  }, 10);
+  }, 100);
 }
 
 function pasangTeksBerjalan() {
   const teks = $('#berjalan-teks');
-  let x = teks.parentElement.offsetWidth;
-  setInterval(() => {
-    x -= 1;
-    if (x < -teks.offsetWidth) x = teks.parentElement.offsetWidth;
-    teks.style.left = x + 'px';
-  }, 10);
+  if (!teks) return;
+
+  // Pindahkan animasi teks berjalan dari JS Main Thread ke CSS Compositor Thread.
+  // Menggunakan transform: translateX() offload tugas animasi sepenuhnya ke GPU.
+  teks.style.display = 'inline-block';
+  teks.style.whiteSpace = 'nowrap';
+
+  if (!document.getElementById('style-animasi-berjalan')) {
+    const style = document.createElement('style');
+    style.id = 'style-animasi-berjalan';
+    style.textContent = `
+      @keyframes jalanTeksCompositor {
+        0% { transform: translateX(100%); }
+        100% { transform: translateX(-100%); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  teks.style.animation = 'jalanTeksCompositor 15s linear infinite';
 }
 
 async function pasangBannerPromo() {

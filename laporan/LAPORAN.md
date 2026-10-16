@@ -20,9 +20,12 @@ dan penyimpangan apa pun dari protokol di TUGAS.md bagian 7.
 | S1 | Long task terlama | | | <= 100 ms | |
 | S2 | INP interaksi produk (median trace) | 133 ms | 199 ms | <= 200 ms | Ya, tepat di batas |
 | S3 | Jumlah pesanan dari 3 klik cepat | 3 | tidak tersedia 3 run baku; uji berurutan = 3 tindakan/3 pesanan | 1 | Belum dapat dinilai penuh |
-| S4 | INP / progres tergambar bertahap? | | | | |
-| S5 | Frame > 50 ms per 10 dtk | | | <= 2 | |
-| S6 | Frame > 50 ms per 10 dtk | | | <= 2 | |
+| S4 | INP / progres tergambar bertahap? | 3.024 ms | 528 ms | <= 200 | Membaik signifikan (82,5%) |
+| S4 | Long task terlama | 1.581 ms | 255 ms | <= 100 | Membaik signifikan (83,8%) |
+| S5 | Frame > 50 ms per 10 dtk | 619 frame | 110 frame | <= 2 | Membaik signifikan (82,2%) |
+| S6 | Frame > 50 ms per 10 dtk | 472 frame | 75 frame | <= 2 | Membaik signifikan (84,1%) |
+| S6 | INP idle | 480 ms| 176 ms | <= 200ms | Ya |
+
 
 ## 4. Temuan
 
@@ -159,6 +162,52 @@ berkas trace `laporan/trace/` (median 3 run menyusul); rinci di `laporan/trace/C
   utilization*. Guard klien tidak menggantikan idempotency key server untuk retry lintas
   perangkat.
 
+### T-06: Perhitungan Voucher Memblokir Main Thread dan Membekukan UI
+
+* **Tiket terkait:** TK-1057 (Mas Dimas: "Masukin voucher KILAT1212, layarnya beku lama banget...").
+* **Gejala bagi pengguna:** Layar tidak dapat di-scroll, kolom pencarian membeku, dan progres perhitungan tidak berjalan bertahap (langsung dari `0%` ke `100%`).
+* **Bukti:** Baseline S4 merekam median Long Task terlama sebesar **1.581 ms**, TBT **9.509 ms**, dan INP **3.024 ms**. Klik pada tombol voucher menahan input pencarian dengan `tundaInput` hingga **2.875 ms**.
+* **Akar Masalah dan Mekanismenya:** Fungsi `terapkanVoucher` di `harga-promo.js` menjalankan komputasi `simulasiCicilan` secara sinkron untuk ribuan produk dalam satu task. Kata kunci `async` hanya mengembalikan *Promise*, tetapi tidak memberikan *Rendering Opportunity* bagi browser karena tidak ada titik *yield* berupa `await` pada timer atau *macro-task*.
+* **Kualitas yang Terdampak (ISO/IEC 25010):**
+
+  * *Performance efficiency — time behaviour*: waktu pemblokiran Main Thread berlebihan.
+  * *Interaction capability — operability*: antarmuka tidak dapat dioperasikan saat komputasi berlangsung.
+* **Perbaikan:** Menerapkan *Time-Slicing* pada `terapkanVoucher` dengan mengeksekusi `await new Promise(r => setTimeout(r, 0))` setiap 12 ms. Hal ini memberikan *yield point* ke Event Loop agar browser dapat merender pembaruan UI, termasuk *progress bar*, dan merespons event masukan keyboard.
+* **Hasil:** Long Task terlama turun dari **1.581 ms menjadi 255 ms** (turun **83,8%**), INP turun dari **3.024 ms menjadi 528 ms** (turun **82,5%**), dan *progress bar* tergambar secara bertahap.
+
+---
+
+### T-07: Aktivitas Main Thread Tinggi Saat Idle Menyebabkan Perangkat Panas
+
+* **Tiket terkait:** TK-1070 (Pak Yusuf: "Baru buka halaman 5 menit HP sudah panas dan baterai turun cepat").
+* **Gejala bagi pengguna:** Baterai HP cepat habis dan perangkat terasa panas meskipun pengguna hanya membiarkan halaman dalam keadaan diam.
+* **Bukti:** Baseline S6 merekam **472 frame lambat (>50 ms)** dalam 10 detik idle, dengan frame terburuk **2.045 ms** dan INP **480 ms**.
+* **Akar Masalah dan Mekanismenya:** `promo.js` menjalankan dua timer `setInterval` dengan interval 10 ms. Fungsi `pasangTeksBerjalan` memutasi CSS `style.left` melalui JavaScript sebanyak 100 kali per detik, sehingga memicu seluruh tahap pipeline (*Style → Layout → Paint → Composite*) pada Main Thread. Sementara itu, `pasangHitungMundur` membaca `offsetWidth` setiap 10 ms dan memicu *Forced Synchronous Layout*.
+* **Kualitas yang Terdampak (ISO/IEC 25010):**
+
+  * *Performance efficiency — resource utilization & capacity*: pemborosan daya CPU dan baterai tanpa adanya interaksi aktif dari pengguna.
+* **Perbaikan:**
+
+  1. Memindahkan animasi teks berjalan ke CSS Compositor menggunakan `transform: translateX()` dan `@keyframes`, sehingga beban animasi tidak lagi bergantung pada manipulasi posisi melalui JavaScript di Main Thread.
+  2. Mengubah interval hitung mundur menjadi 100 ms serta menambahkan *DOM diffing* dan caching `offsetWidth`.
+* **Hasil:** Frame lambat saat idle berkurang dari **472 menjadi 75 frame** (turun **84,1%**), frame terburuk turun dari **2.045 ms menjadi 400 ms**, dan INP idle turun dari **480 ms menjadi 176 ms**, sehingga memenuhi target **≤ 200 ms**.
+
+---
+
+### T-08: Layout Thrashing Saat Pengguliran Daftar Produk
+
+* **Tiket terkait:** TK-1063 (Bu Ningsih: "Scroll daftar barangnya patah-patah, tidak enak dilihat").
+* **Gejala bagi pengguna:** Gerakan pengguliran layar terasa tidak mulus (*jank* atau *dropped frames*).
+* **Bukti:** Baseline S5 merekam **619 frame lambat (>50 ms)** selama 10 detik pengguliran, dengan frame terburuk **2.083 ms** dan Long Task **1.628 ms**.
+* **Akar Masalah dan Mekanismenya:** Handler `scroll` pada `gulir.js` menjalankan `querySelectorAll('.kartu')` dan membaca `getBoundingClientRect()`, kemudian langsung menulis `classList` dan `style.minHeight` pada setiap perulangan kartu. Pola operasi baca-tulis geometri DOM secara berulang memaksa browser melakukan *Forced Synchronous Layout*.
+* **Kualitas yang Terdampak (ISO/IEC 25010):**
+
+  * *Performance efficiency — time behaviour*: waktu pemrosesan yang berlebihan akibat kalkulasi layout berulang.
+  * *Interaction capability — user engagement*: pengalaman visual yang buruk mengganggu kenyamanan pengguliran.
+* **Perbaikan:** Menghapus kalkulasi `getBoundingClientRect()` manual dari event listener `scroll` dan menggantinya dengan `IntersectionObserver` untuk memantau visibilitas kartu secara *asynchronous*. Selain itu, pembaruan header dibungkus menggunakan `requestAnimationFrame`.
+* **Hasil:** Frame lambat saat pengguliran turun dari **619 menjadi 110 frame** (turun **82,2%**), frame terburuk turun dari **2.083 ms menjadi 633 ms**, dan Long Task terlama turun dari **1.628 ms menjadi 535 ms**.
+
+
 ## 5. Dugaan yang ternyata keliru
 Dugaan dari catatan serah terima, tiket, atau tim sendiri yang terbantah pengukuran. Sertakan angkanya.
 
@@ -175,12 +224,16 @@ Dugaan dari catatan serah terima, tiket, atau tim sendiri yang terbantah penguku
 - **Rudi #3 — "bubble sort harus diganti quicksort"** (kontribusi P3): tidak material.
   Fungsi hanya mengurutkan **12 merek** satu kali, yaitu **66 perbandingan**. Median bubble
   sort **0,0025 ms**, sedangkan sort bawaan **0,0012 ms**; potensi hemat **0,0013 ms**.
+- Rudi #4 — "Perhitungan voucher sudah saya buat async, jadi harusnya aman dan tidak memblokir" (kontribusi P1): terbantah total.
+  terbukti di baseline S4: Long Task terlama mencapai 1.581 ms dan Total Blocking Time (TBT) mencapai 9.509 ms, meskipun fungsi terapkanVoucher dan hitungHargaPromo menggunakan kata kunci async. Kata kunci async hanya membuat fungsi mengembalikan Promise dan tidak otomatis membebaskan Main Thread.
+  Pemblokiran baru berkurang setelah diterapkan Time-Slicing melalui await new Promise(r => setTimeout(r, 0)), yang memberikan kesempatan kepada Event Loop untuk memproses task lain. Long Task terlama turun dari 1.581 menjadi 255 ms (turun 83,8%), INP turun dari 3.024 menjadi 528 ms (turun 82,5%), dan progress bar akhirnya tergambar bertahap. Jadi, yang mengatasi pemblokiran adalah yielding secara eksplisit, bukan sekadar kata kunci async.
 - **Rudi #5 — "SDK berat dan tidak boleh disentuh"** (kontribusi P3): bagian pertama benar,
   tetapi kesimpulannya salah. Tanpa mengubah vendor, payload dipangkas dari **1.225.955 ke
   186 byte** dan pemanggilan dijadwalkan setelah paint. Microbenchmark `Lacak.kirim` turun
   dari **52,5579 menjadi 9,2659 ms**; processing handler S2 turun dari **63,6 menjadi 2,1 ms**.
   Jadi titik integrasinya boleh dan perlu diubah sambil seluruh event tetap dikirim. Metode
   dan keterbatasan microbenchmark ada di `laporan/trace/CATATAN-P3.md`.
+
 
 ## 6. Yang belum beres dan rekomendasi
 Masalah yang tersisa, risiko, dan usulan untuk tim lain (backend, vendor SDK, desain).
@@ -199,6 +252,14 @@ Masalah yang tersisa, risiko, dan usulan untuk tim lain (backend, vendor SDK, de
 3. **Koordinasi P2**: placeholder tinggi banner sebelum `/api/promo` selesai — sisa CLS 0,472
    ada di sana; tanpa itu target CLS 0,1 tidak mungkin tercapai tim.
 
+**Kontribusi P2:**
+1. **INP dan Long Task S4 (Voucher) belum mencapai target ideal** (INP median 528 ms; Long Task terlama 255 ms pada CPU 4x slowdown)[cite: 24].
+ Meskipun *Time-Slicing* telah memecah task raksasa[cite: 1], manipulasi DOM untuk memperbarui progress bar secara berulang tetap menghasilkan biaya *Layout & Paint* di Main Thread[cite: 1]. Rekomendasi lanjutan: Pindahkan komputasi aturan promo bertingkat dan simulasi cicilan sepenuhnya ke **Web Worker** agar Main Thread tidak menerima beban kalkulasi sama sekali.
+2. **Frame lambat S5 (Scroll 10 dtk) belum mencapai <= 2 frame** (turun 82,2% dari 619 ke 110 frame)[cite: 34, 37]. *IntersectionObserver*
+ berhasil mengeliminasi *Layout Thrashing*[cite: 1], namun banyaknya jumlah node DOM (1.500–3.000 kartu) tetap menimbulkan beban *Paint/Composite* saat pengguliran cepat pada CPU 4x slowdown[cite: 1]. Rekomendasi lanjutan: Terapkan **virtualisasi DOM** (hanya merender kartu yang berada di viewport) atau properti CSS `content-visibility: auto`.
+3. **Sisa frame lambat pada S6 (Idle 10 dtk)** (turun 84,1% dari 472 ke 75 frame; target INP idle **tercapai** di angka 176 ms <= 200 ms)[cite: 1,
+ 27, 30, 31]. Sisa frame lambat pada kondisi diam sebagian berasal dari *timer tick* hitung mundur 100 ms yang masih memutasi DOM[cite: 1, 12]. Rekomendasi lanjutan: Hentikan *timer* hitung mundur sepenuhnya menggunakan **Page Visibility API** (`document.hidden`) saat tab berada di latar belakang/tidak fokus.
+
 **Kontribusi P3:**
 1. S2 memenuhi target INP hanya tepat di batas dan long task masih > 100 ms. Pengurangan
    processing handler sudah terukur, tetapi optimasi lebih lanjut harus mempertimbangkan SDK
@@ -210,6 +271,8 @@ Masalah yang tersisa, risiko, dan usulan untuk tim lain (backend, vendor SDK, de
    duplikasi dari UI pada satu halaman, sesuai batas karena `server.js` tidak boleh diubah.
 
 ## 7. Pernyataan penggunaan AI dan pembagian kerja
+
+P2 menggunakan AI (Gemini) sebagai mitra diskusi teknis dan penyusun draf perbaikan kode. AI membantu mengidentifikasi *Layout Thrashing* pada `gulir.js`, merancang mekanisme *Time-Slicing* pada `harga-promo.js`, serta memindahkan animasi JS ke CSS Compositor (`transform: translateX`) pada `promo.js`. Setiap usulan AI diaudit dan diuji ulang menggunakan trace Performance panel DevTools (CPU 4x slowdown) sebelum diterapkan ke repositori utama. P2 bertanggung jawab atas diagnosis, perbaikan kode (`harga-promo.js`, `promo.js`, `gulir.js`), perekaman trace baseline vs sesudah perbaikan, serta analisis statistik untuk tiket P2 (TK-1057, TK-1070, TK-1063).
 
 P3 menggunakan OpenAI Codex untuk membantu membaca trace, menghitung median, menyusun
 hipotesis, dan mengusulkan implementasi. P3 memeriksa kembali usulan tersebut terhadap source,

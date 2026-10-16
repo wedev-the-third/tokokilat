@@ -1,0 +1,61 @@
+{
+  "waktu": "2026-10-02T08:12:02.857Z",
+  "jumlahLongTask": 49,
+  "longTaskTerlama": 1628,
+  "totalBlokir": 3666,
+  "jumlahInteraksi": 242,
+  "inp": 496,
+  "inpRinci": {
+    "durasi": 496,
+    "jenis": "click",
+    "target": "#au-salin",
+    "tundaInput": 478,
+    "proses": 1,
+    "presentasi": 17
+  },
+  "limaInteraksiTerlambat": [
+    {
+      "durasi": 872,
+      "jenis": "click",
+      "target": "#au-salin",
+      "tundaInput": 350,
+      "proses": 0,
+      "presentasi": 522
+    },
+    {
+      "durasi": 664,
+      "jenis": "click",
+      "target": "#au-salin",
+      "tundaInput": 146,
+      "proses": 0,
+      "presentasi": 518
+    },
+    {
+      "durasi": 544,
+      "jenis": "pointerdown",
+      "target": "?",
+      "tundaInput": 110,
+      "proses": 0,
+      "presentasi": 434
+    },
+    {
+      "durasi": 496,
+      "jenis": "pointerdown",
+      "target": "?",
+      "tundaInput": 106,
+      "proses": 0,
+      "presentasi": 391
+    },
+    {
+      "durasi": 496,
+      "jenis": "click",
+      "target": "#au-salin",
+      "tundaInput": 478,
+      "proses": 1,
+      "presentasi": 17
+    }
+  ],
+  "cls": 0.473,
+  "frameLambat": 889,
+  "frameTerburuk": 2083
+}

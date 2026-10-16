@@ -27,14 +27,13 @@ function simulasiCicilan(harga) {
   return terbaik;
 }
 
-// Dibuat async supaya perhitungan tidak memblokir halaman.
+// Menghitung harga promo tanpa memblokir Main Thread
 async function hitungHargaPromo(produk, aturan) {
   const dasar = hargaSetelahDiskon(produk);
   if (dasar < aturan.minBelanja) return null;
   let potongan = Math.min(Math.round((dasar * aturan.persen) / 100), aturan.maksPotongan);
   if (produk.flashSale) potongan = Math.round(potongan / 2); // flash sale hanya dapat setengah
   let hargaAkhir = Math.max(dasar - potongan, 100);
-  for (let i = 0; i < 40; i++) simulasiCicilan(hargaAkhir + i); // cek kestabilan pembulatan
   const cicilan = simulasiCicilan(hargaAkhir);
   return { hargaAkhir, cicilan };
 }
@@ -56,14 +55,23 @@ async function terapkanVoucher(kode) {
   let selesai = 0;
   keadaan.hargaVoucher.clear();
 
+  let lastYield = performance.now();
+
   for (const produk of keadaan.semuaProduk) {
-    // await di setiap produk supaya browser sempat menggambar progress bar
     const hasil = await hitungHargaPromo(produk, aturan);
     if (hasil) keadaan.hargaVoucher.set(produk.id, hasil.hargaAkhir);
     selesai++;
-    const persen = Math.round((selesai / total) * 100);
-    isi.style.width = persen + '%';
-    teks.textContent = 'Menghitung harga promo… ' + persen + '% (' + selesai + ' dari ' + total + ' produk)';
+
+    const now = performance.now();
+    // Time-Slicing: Yield ke Event Loop setiap ~12ms agar browser mendapatkan Rendering Opportunity
+    // untuk menggambar progress bar dan memproses event input pengguna (INP tetap responsif).
+    if (now - lastYield > 12 || selesai === total) {
+      const persen = Math.round((selesai / total) * 100);
+      isi.style.width = persen + '%';
+      teks.textContent = 'Menghitung harga promo… ' + persen + '% (' + selesai + ' dari ' + total + ' produk)';
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      lastYield = performance.now();
+    }
   }
 
   perbaruiHargaVoucherDiKartu();

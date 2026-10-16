@@ -1,0 +1,61 @@
+{
+  "waktu": "2026-10-14T13:14:24.563Z",
+  "jumlahLongTask": 54,
+  "longTaskTerlama": 255,
+  "totalBlokir": 3724,
+  "jumlahInteraksi": 32,
+  "inp": 528,
+  "inpRinci": {
+    "durasi": 528,
+    "jenis": "keyup",
+    "target": "#kolom-cari",
+    "tundaInput": 233,
+    "proses": 0,
+    "presentasi": 295
+  },
+  "limaInteraksiTerlambat": [
+    {
+      "durasi": 528,
+      "jenis": "keyup",
+      "target": "#kolom-cari",
+      "tundaInput": 233,
+      "proses": 0,
+      "presentasi": 295
+    },
+    {
+      "durasi": 472,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 127,
+      "proses": 0,
+      "presentasi": 345
+    },
+    {
+      "durasi": 448,
+      "jenis": "keydown",
+      "target": "#kolom-cari",
+      "tundaInput": 153,
+      "proses": 0,
+      "presentasi": 295
+    },
+    {
+      "durasi": 400,
+      "jenis": "keyup",
+      "target": "#kolom-cari",
+      "tundaInput": 210,
+      "proses": 0,
+      "presentasi": 190
+    },
+    {
+      "durasi": 304,
+      "jenis": "pointerup",
+      "target": "?",
+      "tundaInput": 138,
+      "proses": 0,
+      "presentasi": 166
+    }
+  ],
+  "cls": 0.324,
+  "frameLambat": 112,
+  "frameTerburuk": 367
+}

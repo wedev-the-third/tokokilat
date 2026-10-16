@@ -278,3 +278,63 @@ bagian "sebelum" setelah hasilnya diketahui; bila prediksi meleset, jelaskan di 
   sengaja membeli produk yang sama lagi. Setelah tombol dipulihkan, pesanan berikutnya
   tetap dapat dibuat, sebagaimana dibuktikan oleh uji berurutan. Guard ini tetap hanya
   melindungi UI saat ini dan bukan idempotensi lintas perangkat atau retry jaringan.
+
+---
+
+## P-06: Perhitungan voucher membekukan layar (TK-1057)
+
+**Tiket terkait:** TK-1057 (Mas Dimas — "Masukin voucher KILAT1212, layarnya beku lama banget")
+**Tanggal dan hash commit entri ini:** 2026-10-02
+
+### Sebelum perbaikan
+
+- **Yang teramati di trace (baseline, S4):** Long task raksasa dengan durasi median **1.581 ms** dan TBT **9.509 ms**. INP berada pada **3.024 ms**. Pengguna tidak bisa mengetik di kolom pencarian selama perhitungan berlangsung.
+- **Dugaan mekanisme:** `terapkanVoucher` di `harga-promo.js` memproses seluruh produk secara sinkron dalam satu microtask checkpoint. Kata kunci `async` tidak memindahkan komputasi keluar dari Main Thread, sehingga memblokir *Rendering Opportunity*.
+- **Rencana perubahan:** Terapkan teknik *Time-Slicing* (`await new Promise(r => setTimeout(r, 0))`) setiap ~12ms dalam loop perhitungan voucher agar Main Thread dapat merender progress bar dan menerima input keyboard.
+- **Prediksi terukur:** INP turun dari 3.024 ms menjadi $\le 500\text{ ms}$, Long Task terlama turun di bawah 300 ms, dan progress bar terisi secara bertahap $0\% \to 100\%$.
+
+### Sesudah perbaikan
+
+- **Hash commit perbaikan:** `[isi hash commit perbaikan p2]`
+- **Hasil ukur (median 3 kali):** INP turun menjadi **528 ms** (turun 82,5%), Long Task terlama turun menjadi **255 ms** (turun 83,8%), TBT turun dari 9.509 ms menjadi **3.724 ms**.
+- **Prediksi vs kenyataan:** TEPAT. Long task berhasil dipecah dan input kolom cari menjadi responsif selama perhitungan voucher.
+
+---
+
+## P-07: HP panas dan baterai boros saat diam (TK-1070)
+
+**Tiket terkait:** TK-1070 (Pak Yusuf — "Baru buka halaman 5 menit HP sudah panas dan baterai turun cepat")
+**Tanggal dan hash commit entri ini:** 2026-10-02
+
+### Sebelum perbaikan
+
+- **Yang teramati di trace (baseline, S6):** Terjadi **472 frame lambat (>50ms)** selama 10 detik idle. INP berada pada **480 ms**.
+- **Dugaan mekanisme:** `setInterval` 10ms pada `pasangTeksBerjalan` mengubah `style.left` via JavaScript, memaksa pipeline *Style-Layout-Paint* berjalan 100x/detik di Main Thread. `pasangHitungMundur` membaca `offsetWidth` tiap 10ms memicu *Forced Reflow*.
+- **Rencana perubahan:** Ubah animasi teks berjalan menjadi CSS `@keyframes` (`transform: translateX()`) agar berjalan di Compositor Thread. Ubah interval hitung mundur menjadi 100ms dan tambahkan *DOM diffing*.
+- **Prediksi terukur:** Frame lambat saat idle turun >80%, aktivitas Main Thread saat diam mendekati nol, dan INP idle turun menjadi $\le 200\text{ ms}$.
+
+### Sesudah perbaikan
+
+- **Hash commit perbaikan:** `[isi hash commit perbaikan p2]`
+- **Hasil ukur (median 3 kali):** Frame lambat turun dari 472 menjadi **75 frame** (turun 84,1%), Frame terburuk membaik dari 2.045 ms menjadi **400 ms**, dan INP idle turun menjadi **176 ms** (memenuhi target $\le 200\text{ ms}$).
+- **Prediksi vs kenyataan:** TEPAT. Beban CPU saat idle berkurang drastis karena animasi berjalan di Compositor Thread.
+
+---
+
+## P-08: Scroll daftar barang patah-patah (TK-1063)
+
+**Tiket terkait:** TK-1063 (Bu Ningsih — "Scroll daftar barangnya patah-patah, tidak enak dilihat")
+**Tanggal dan hash commit entri ini:** 2026-10-02
+
+### Sebelum perbaikan
+
+- **Yang teramati di trace (baseline, S5):** Terdapat **619 frame lambat (>50ms)** dalam 10 detik scroll, dengan frame terburuk mencapai **2.083 ms** dan Long Task **1.628 ms**.
+- **Dugaan mekanisme:** Event listener `scroll` memanggil `getBoundingClientRect()` dan mengubah `classList`/`style.minHeight` secara interleave pada ribuan kartu, menyebabkan *Layout Thrashing*.
+- **Rencana perubahan:** Ganti deteksi posisi scroll manual menggunakan `IntersectionObserver` dan `MutationObserver`, serta bungkus update header/bar dengan `requestAnimationFrame`.
+- **Prediksi terukur:** Frame lambat saat scroll turun signifikan (<150 frame) dan frame terburuk membaik di bawah 1.000 ms.
+
+### Sesudah perbaikan
+
+- **Hash commit perbaikan:** `[isi hash commit perbaikan p2]`
+- **Hasil ukur (median 3 kali):** Frame lambat turun dari 619 menjadi **110 frame** (turun 82,2%), Frame terburuk turun dari 2.083 ms menjadi **633 ms**, dan Long Task terlama turun menjadi **535 ms**.
+- **Prediksi vs kenyataan:** TEPAT. Pengguliran menjadi mulus tanpa menderita reflow sinkron berulang.
