@@ -1,6 +1,7 @@
 # Laporan audit performa dan interaksi TokoKilat
 
 **Tim:** Tim 3 (wedev-the-third) | **Kelas:** 3B-TI4 | **Tanggal:** 16 Oktober 2026  
+**Repositori GitHub:** [https://github.com/wedev-the-third/tokokilat](https://github.com/wedev-the-third/tokokilat)  
 **Anggota:**  
 1. Arkan Ramadhan Nugraha (Arney1) — NIM: 241524033  
 2. Fauzi Ismail (mailvlous) — NIM: 241524042  
