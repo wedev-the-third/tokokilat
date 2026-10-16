@@ -295,7 +295,7 @@ bagian "sebelum" setelah hasilnya diketahui; bila prediksi meleset, jelaskan di 
 
 ### Sesudah perbaikan
 
-- **Hash commit perbaikan:** `[isi hash commit perbaikan p2]`
+- **Hash commit perbaikan:** `6d3a172`
 - **Hasil ukur (median 3 kali):** INP turun menjadi **528 ms** (turun 82,5%), Long Task terlama turun menjadi **255 ms** (turun 83,8%), TBT turun dari 9.509 ms menjadi **3.724 ms**.
 - **Prediksi vs kenyataan:** TEPAT. Long task berhasil dipecah dan input kolom cari menjadi responsif selama perhitungan voucher.
 
@@ -315,7 +315,7 @@ bagian "sebelum" setelah hasilnya diketahui; bila prediksi meleset, jelaskan di 
 
 ### Sesudah perbaikan
 
-- **Hash commit perbaikan:** `[isi hash commit perbaikan p2]`
+- **Hash commit perbaikan:** `6d3a172`
 - **Hasil ukur (median 3 kali):** Frame lambat turun dari 472 menjadi **75 frame** (turun 84,1%), Frame terburuk membaik dari 2.045 ms menjadi **400 ms**, dan INP idle turun menjadi **176 ms** (memenuhi target $\le 200\text{ ms}$).
 - **Prediksi vs kenyataan:** TEPAT. Beban CPU saat idle berkurang drastis karena animasi berjalan di Compositor Thread.
 
@@ -335,6 +335,6 @@ bagian "sebelum" setelah hasilnya diketahui; bila prediksi meleset, jelaskan di 
 
 ### Sesudah perbaikan
 
-- **Hash commit perbaikan:** `[isi hash commit perbaikan p2]`
+- **Hash commit perbaikan:** `6d3a172`
 - **Hasil ukur (median 3 kali):** Frame lambat turun dari 619 menjadi **110 frame** (turun 82,2%), Frame terburuk turun dari 2.083 ms menjadi **633 ms**, dan Long Task terlama turun menjadi **535 ms**.
 - **Prediksi vs kenyataan:** TEPAT. Pengguliran menjadi mulus tanpa menderita reflow sinkron berulang.

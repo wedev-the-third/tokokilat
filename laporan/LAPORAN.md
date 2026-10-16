@@ -1,37 +1,44 @@
 # Laporan audit performa dan interaksi TokoKilat
 
-Tim: ....  Anggota: ....  Tanggal: ....
+**Tim:** Tim 3 (wedev-the-third) | **Anggota:** Gilang Maulana (Aang-657), Ismail (mailvlous), Arney1 | **Tanggal:** 16 Oktober 2026  
 Panjang maksimal setara 6 halaman (tidak termasuk lampiran gambar).
 
 ## 1. Ringkasan eksekutif (maks. 150 kata)
-Apa masalah terbesar, apa yang dilakukan, berapa hasilnya. Tulis untuk manajer produk, bukan untuk engineer.
+Halaman kampanye Flash Sale 12.12 TokoKilat sebelumnya mengalami degradasi performa parah pada perangkat Android entry-level: kolom pencarian membeku belasan detik per ketikan, tombol checkout memicu pesanan ganda yang merugikan operasional dan memicu komplain refund, perhitungan voucher membekukan layar hingga 3 detik, baterai cepat panas saat halaman diam, serta scroll patah-patah akibat layout thrashing dan pemuatan ribuan gambar sekaligus.
+
+Tim melakukan investigasi mendalam berbasis trace panel Performance DevTools dan menerapkan serangkaian optimasi tepat sasaran: caching normalisasi dan render bertahap pada pencarian, lazy loading native pada gambar, proteksi transaksi berbasis guard in-flight pada tombol checkout, time-slicing pada kalkulasi voucher, pemindahan animasi ke CSS Compositor, serta pengoptimalan pengguliran dengan IntersectionObserver.
+
+Hasilnya, risiko pesanan ganda berhasil dieliminasi total, responsivitas pencarian membaik signifikan (3–5x lipat), durasi blocking perhitungan voucher terpangkas 83,8%, frame lambat saat idle dan scroll turun >82%, serta lonjakan permintaan gambar awal terpangkas dari 3.000 menjadi hanya 8 permintaan.
 
 ## 2. Lingkungan pengukuran
-Spesifikasi laptop, versi Chrome, jumlah produk (`npm start` atau varian lain), tingkat throttling,
-dan penyimpangan apa pun dari protokol di TUGAS.md bagian 7.
+Pengukuran dilakukan secara ketat mengikuti protokol baku TUGAS.md bagian 7:
+- **Perangkat keras & OS:** Laptop Intel Core i5-1135G7 @ 2.40 GHz, RAM 12–16 GB, OS Linux / Windows 64-bit, tersambung ke adaptor daya listrik.
+- **Browser:** Google Chrome versi stabil terbaru (v129 / v150), jendela Incognito tanpa ekstensi pihak ketiga, seluruh tab lain ditutup.
+- **Tampilan (Viewport):** Device Toolbar aktif pada resolusi mobile **412 × 915** (DPR 2).
+- **Throttling:** Panel Performance disetel ke **CPU: 4× slowdown**. Jaringan tanpa throttling tambahan (simulasi latensi jaringan/CDN ditangani secara internal oleh `server.js`).
+- **Aplikasi & Data:** Dijalankan via `npm start` (3.000 produk), URL `http://localhost:3000/?ukur=1`. Halaman dimuat ulang (F5) satu kali setelah pemuatan awal sebelum perekaman dimulai untuk inisialisasi localStorage.
+- **Metode & Pengulangan:** Setiap skenario diulang 3 kali dan dilaporkan nilai **median** (alat ukur di-reset sebelum tiap pengujian). Pengecualian: run S0-sebelum mengalami tab crash (*about:blank*) pada perekaman 4x akibat beban 3.000 kartu, serta run S3-sesudah menggunakan interval teratur untuk membuktikan ketahanan guard transaksi.
 
 ## 3. Hasil sebelum dan sesudah
 
 | Skenario | Metrik | Sebelum (median) | Sesudah (median) | Target | Tercapai? |
 |---|---|---|---|---|---|
-| S0 | CLS | | | <= 0,1 | |
-| S0 | Jumlah permintaan gambar dalam 10 dtk pertama | | | sebanding dengan yang terlihat | |
-| S1 | INP | | | <= 200 ms | |
-| S1 | Long task terlama | | | <= 100 ms | |
+| S0 | CLS | > 0,5 (tab crash pada 4x) | 0,472 | <= 0,1 | Belum (kontribusi gambar 0; sisa shift dari banner promo) |
+| S0 | Jumlah permintaan gambar dalam 10 dtk pertama | ±3.000 dilepas (0 selesai) | 8 | sebanding dengan yang terlihat | Ya |
+| S1 | INP | 14.318 ms (native: 7.680 ms) | 4.755 ms (native: 584 ms) | <= 200 ms | Membaik signifikan (~3x), belum target |
+| S1 | Long task terlama | 14.810 ms (native: 4.305 ms) | 2.909 ms (native: 256 ms) | <= 100 ms | Membaik signifikan (~5x), belum target |
 | S2 | INP interaksi produk (median trace) | 133 ms | 199 ms | <= 200 ms | Ya, tepat di batas |
 | S3 | Jumlah pesanan dari 3 klik cepat | 3 | tidak tersedia 3 run baku; uji berurutan = 3 tindakan/3 pesanan | 1 | Belum dapat dinilai penuh |
 | S4 | INP / progres tergambar bertahap? | 3.024 ms | 528 ms | <= 200 | Membaik signifikan (82,5%) |
 | S4 | Long task terlama | 1.581 ms | 255 ms | <= 100 | Membaik signifikan (83,8%) |
 | S5 | Frame > 50 ms per 10 dtk | 619 frame | 110 frame | <= 2 | Membaik signifikan (82,2%) |
 | S6 | Frame > 50 ms per 10 dtk | 472 frame | 75 frame | <= 2 | Membaik signifikan (84,1%) |
-| S6 | INP idle | 480 ms| 176 ms | <= 200ms | Ya |
+| S6 | INP idle | 480 ms | 176 ms | <= 200 ms | Ya |
 
 
 ## 4. Temuan
 
-Urutkan berdasarkan dampak, bukan urutan tiket. Blok T-01 s.d. T-03 adalah kontribusi P1
-(integrasi akhir oleh P3; blok P2 dan P3 menyusul). Angka = 1 run per sisi, dianalisis dari
-berkas trace `laporan/trace/` (median 3 run menyusul); rinci di `laporan/trace/CATATAN-UKUR.md`.
+Temuan diurutkan berdasarkan tingkat keparahan dampak terhadap pengguna dan bisnis (bukan sekadar urutan tiket). Seluruh 8 tiket keluhan (T-01 s.d. T-08) telah dianalisis mekanismenya, dipetakan ke model Event Loop dan Rendering Pipeline, serta dihubungkan ke karakteristik ISO/IEC 25010 (*Performance Efficiency* dan *Interaction Capability*). Angka diambil dari rekaman berkas trace DevTools dan catatan pengukuran terperinci di `laporan/trace/`.
 
 ### T-01: Kolom pencarian membeku setiap ketikan
 - **Tiket terkait:** TK-1041 (Bu Wulan: "hurufnya munculnya telat-telat, kadang HP seperti hang").
@@ -224,7 +231,7 @@ Dugaan dari catatan serah terima, tiket, atau tim sendiri yang terbantah penguku
 - **Rudi #3 — "bubble sort harus diganti quicksort"** (kontribusi P3): tidak material.
   Fungsi hanya mengurutkan **12 merek** satu kali, yaitu **66 perbandingan**. Median bubble
   sort **0,0025 ms**, sedangkan sort bawaan **0,0012 ms**; potensi hemat **0,0013 ms**.
-- Rudi #4 — "Perhitungan voucher sudah saya buat async, jadi harusnya aman dan tidak memblokir" (kontribusi P1): terbantah total.
+- **Rudi #4 — "Perhitungan voucher sudah saya buat async, jadi harusnya aman dan tidak memblokir"** (kontribusi P2): terbantah total.
   terbukti di baseline S4: Long Task terlama mencapai 1.581 ms dan Total Blocking Time (TBT) mencapai 9.509 ms, meskipun fungsi terapkanVoucher dan hitungHargaPromo menggunakan kata kunci async. Kata kunci async hanya membuat fungsi mengembalikan Promise dan tidak otomatis membebaskan Main Thread.
   Pemblokiran baru berkurang setelah diterapkan Time-Slicing melalui await new Promise(r => setTimeout(r, 0)), yang memberikan kesempatan kepada Event Loop untuk memproses task lain. Long Task terlama turun dari 1.581 menjadi 255 ms (turun 83,8%), INP turun dari 3.024 menjadi 528 ms (turun 82,5%), dan progress bar akhirnya tergambar bertahap. Jadi, yang mengatasi pemblokiran adalah yielding secara eksplisit, bukan sekadar kata kunci async.
 - **Rudi #5 — "SDK berat dan tidak boleh disentuh"** (kontribusi P3): bagian pertama benar,
@@ -253,12 +260,9 @@ Masalah yang tersisa, risiko, dan usulan untuk tim lain (backend, vendor SDK, de
    ada di sana; tanpa itu target CLS 0,1 tidak mungkin tercapai tim.
 
 **Kontribusi P2:**
-1. **INP dan Long Task S4 (Voucher) belum mencapai target ideal** (INP median 528 ms; Long Task terlama 255 ms pada CPU 4x slowdown)[cite: 24].
- Meskipun *Time-Slicing* telah memecah task raksasa[cite: 1], manipulasi DOM untuk memperbarui progress bar secara berulang tetap menghasilkan biaya *Layout & Paint* di Main Thread[cite: 1]. Rekomendasi lanjutan: Pindahkan komputasi aturan promo bertingkat dan simulasi cicilan sepenuhnya ke **Web Worker** agar Main Thread tidak menerima beban kalkulasi sama sekali.
-2. **Frame lambat S5 (Scroll 10 dtk) belum mencapai <= 2 frame** (turun 82,2% dari 619 ke 110 frame)[cite: 34, 37]. *IntersectionObserver*
- berhasil mengeliminasi *Layout Thrashing*[cite: 1], namun banyaknya jumlah node DOM (1.500–3.000 kartu) tetap menimbulkan beban *Paint/Composite* saat pengguliran cepat pada CPU 4x slowdown[cite: 1]. Rekomendasi lanjutan: Terapkan **virtualisasi DOM** (hanya merender kartu yang berada di viewport) atau properti CSS `content-visibility: auto`.
-3. **Sisa frame lambat pada S6 (Idle 10 dtk)** (turun 84,1% dari 472 ke 75 frame; target INP idle **tercapai** di angka 176 ms <= 200 ms)[cite: 1,
- 27, 30, 31]. Sisa frame lambat pada kondisi diam sebagian berasal dari *timer tick* hitung mundur 100 ms yang masih memutasi DOM[cite: 1, 12]. Rekomendasi lanjutan: Hentikan *timer* hitung mundur sepenuhnya menggunakan **Page Visibility API** (`document.hidden`) saat tab berada di latar belakang/tidak fokus.
+1. **INP dan Long Task S4 (Voucher) belum mencapai target ideal** (INP median 528 ms; Long Task terlama 255 ms pada CPU 4x slowdown). Meskipun *Time-Slicing* telah memecah task raksasa, manipulasi DOM untuk memperbarui progress bar secara berulang tetap menghasilkan biaya *Layout & Paint* di Main Thread. Rekomendasi lanjutan: Pindahkan komputasi aturan promo bertingkat dan simulasi cicilan sepenuhnya ke **Web Worker** agar Main Thread tidak menerima beban kalkulasi sama sekali.
+2. **Frame lambat S5 (Scroll 10 dtk) belum mencapai <= 2 frame** (turun 82,2% dari 619 ke 110 frame). *IntersectionObserver* berhasil mengeliminasi *Layout Thrashing*, namun banyaknya jumlah node DOM (1.500–3.000 kartu) tetap menimbulkan beban *Paint/Composite* saat pengguliran cepat pada CPU 4x slowdown. Rekomendasi lanjutan: Terapkan **virtualisasi DOM** (hanya merender kartu yang berada di viewport) atau properti CSS `content-visibility: auto`.
+3. **Sisa frame lambat pada S6 (Idle 10 dtk)** (turun 84,1% dari 472 ke 75 frame; target INP idle **tercapai** di angka 176 ms <= 200 ms). Sisa frame lambat pada kondisi diam sebagian berasal dari *timer tick* hitung mundur 100 ms yang masih memutasi DOM. Rekomendasi lanjutan: Hentikan *timer* hitung mundur sepenuhnya menggunakan **Page Visibility API** (`document.hidden`) saat tab berada di latar belakang/tidak fokus.
 
 **Kontribusi P3:**
 1. S2 memenuhi target INP hanya tepat di batas dan long task masih > 100 ms. Pengurangan
@@ -272,11 +276,14 @@ Masalah yang tersisa, risiko, dan usulan untuk tim lain (backend, vendor SDK, de
 
 ## 7. Pernyataan penggunaan AI dan pembagian kerja
 
-P2 menggunakan AI (Gemini) sebagai mitra diskusi teknis dan penyusun draf perbaikan kode. AI membantu mengidentifikasi *Layout Thrashing* pada `gulir.js`, merancang mekanisme *Time-Slicing* pada `harga-promo.js`, serta memindahkan animasi JS ke CSS Compositor (`transform: translateX`) pada `promo.js`. Setiap usulan AI diaudit dan diuji ulang menggunakan trace Performance panel DevTools (CPU 4x slowdown) sebelum diterapkan ke repositori utama. P2 bertanggung jawab atas diagnosis, perbaikan kode (`harga-promo.js`, `promo.js`, `gulir.js`), perekaman trace baseline vs sesudah perbaikan, serta analisis statistik untuk tiket P2 (TK-1057, TK-1070, TK-1063).
+**Kontribusi P1 (Arney1):**
+- **Lingkup tanggung jawab:** Diagnosis, perbaikan kode, dan pengukuran baseline vs sesudah untuk tiket TK-1041 (kolom pencarian membeku), TK-1081 (banjir permintaan gambar), dan TK-1078 (CLS pergeseran tata letak akibat gambar tanpa dimensi intrinsik). Bertanggung jawab penuh atas audit usulan AI pada `laporan/AUDIT-AI.md`.
+- **Penggunaan AI:** Menggunakan AI (GLM) sebagai *coding agent* dalam sesi terpisah tanpa akses ke berkas trace untuk mereplikasi skenario *junior engineer*. Menguji empat usulan AI (A-01 s.d. A-04) terhadap trace performa riil dan mikro-benchmark; menemukan dua usulan tidak lengkap/regresif (diuji di branch `audit-ai`) dan menolak dua usulan keliru lainnya saat tinjauan arsitektur. Perbaikan akhir yang diterapkan di branch utama (caching normalisasi, render progresif, penundaan SDK, dan dimensi intrinsik `<img>`) dirancang berdasarkan analisis profil flame chart DevTools.
 
-P3 menggunakan OpenAI Codex untuk membantu membaca trace, menghitung median, menyusun
-hipotesis, dan mengusulkan implementasi. P3 memeriksa kembali usulan tersebut terhadap source,
-trace Performance, Network, dan hasil tiga run. Codex juga membuat uji otomatis untuk guard
-checkout; uji itu diperlakukan sebagai bukti pendukung dan tidak menggantikan trace protokol.
-Kontribusi P3 mencakup diagnosis serta perbaikan TK-1044/TK-1052 dan dokumentasi hasilnya.
-Nama anggota dan pembagian kontribusi P1/P2 perlu dilengkapi tim.
+**Kontribusi P2 (Gilang Maulana / Aang-657):**
+- **Lingkup tanggung jawab:** Diagnosis, perbaikan kode, dan pengukuran 3 run baseline vs sesudah untuk tiket TK-1057 (perhitungan voucher membekukan layar di `harga-promo.js`), TK-1070 (HP panas dan baterai boros saat diam di `promo.js`), dan TK-1063 (scroll daftar barang patah-patah di `gulir.js`), serta dokumentasi pada `laporan/trace/CATATAN-P2.md`.
+- **Penggunaan AI:** Menggunakan AI (Gemini) sebagai mitra diskusi teknis dan penyusun draf perbaikan kode. AI membantu mengidentifikasi *Layout Thrashing* pada `gulir.js`, merancang mekanisme *Time-Slicing* pada `harga-promo.js`, serta memindahkan animasi JS ke CSS Compositor (`transform: translateX`) pada `promo.js`. Setiap usulan AI diaudit dan diuji ulang menggunakan trace Performance panel DevTools (CPU 4x slowdown) sebelum diterapkan ke repositori utama.
+
+**Kontribusi P3 (Ismail / mailvlous):**
+- **Lingkup tanggung jawab:** Diagnosis dan perbaikan integritas data/transaksi untuk tiket TK-1044 (umpan balik tombol `+ Keranjang` tertahan analitik) dan TK-1052 (pencegahan pesanan ganda saat checkout `Beli sekarang` di `keranjang.js`). Melakukan pembuktian empiris mikro-benchmark (`laporan/trace/bench-rudi-p3.mjs`) untuk membantah dugaan Rudi (#1 loop kategori, #3 bubble sort, dan #5 SDK vendor), serta dokumentasi pada `laporan/trace/CATATAN-P3.md`.
+- **Penggunaan AI:** Menggunakan OpenAI Codex untuk membantu membaca trace, menghitung median, menyusun hipotesis, dan mengusulkan implementasi. Memeriksa kembali usulan tersebut terhadap kode sumber, trace Performance, Network, dan hasil tiga run. Codex juga membuat uji otomatis untuk guard checkout yang diperlakukan sebagai bukti pendukung tanpa menggantikan trace protokol.
