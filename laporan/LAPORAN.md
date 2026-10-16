@@ -1,6 +1,10 @@
 # Laporan audit performa dan interaksi TokoKilat
 
-**Tim:** Tim 3 (wedev-the-third) | **Anggota:** Gilang Maulana (Aang-657), Ismail (mailvlous), Arney1 | **Tanggal:** 16 Oktober 2026  
+**Tim:** Tim 3 (wedev-the-third) | **Kelas:** 3B-TI4 | **Tanggal:** 16 Oktober 2026  
+**Anggota:**  
+1. Arkan Ramadhan Nugraha (Arney1) — NIM: 241524033  
+2. Fauzi Ismail (mailvlous) — NIM: 241524042  
+3. Gilang Maulana (Aang-657) — NIM: 241524044  
 Panjang maksimal setara 6 halaman (tidak termasuk lampiran gambar).
 
 ## 1. Ringkasan eksekutif (maks. 150 kata)
@@ -276,14 +280,14 @@ Masalah yang tersisa, risiko, dan usulan untuk tim lain (backend, vendor SDK, de
 
 ## 7. Pernyataan penggunaan AI dan pembagian kerja
 
-**Kontribusi P1 (Arney1):**
+**Kontribusi P1 — Arkan Ramadhan Nugraha (Arney1 / NIM: 241524033):**
 - **Lingkup tanggung jawab:** Diagnosis, perbaikan kode, dan pengukuran baseline vs sesudah untuk tiket TK-1041 (kolom pencarian membeku), TK-1081 (banjir permintaan gambar), dan TK-1078 (CLS pergeseran tata letak akibat gambar tanpa dimensi intrinsik). Bertanggung jawab penuh atas audit usulan AI pada `laporan/AUDIT-AI.md`.
 - **Penggunaan AI:** Menggunakan AI (GLM) sebagai *coding agent* dalam sesi terpisah tanpa akses ke berkas trace untuk mereplikasi skenario *junior engineer*. Menguji empat usulan AI (A-01 s.d. A-04) terhadap trace performa riil dan mikro-benchmark; menemukan dua usulan tidak lengkap/regresif (diuji di branch `audit-ai`) dan menolak dua usulan keliru lainnya saat tinjauan arsitektur. Perbaikan akhir yang diterapkan di branch utama (caching normalisasi, render progresif, penundaan SDK, dan dimensi intrinsik `<img>`) dirancang berdasarkan analisis profil flame chart DevTools.
 
-**Kontribusi P2 (Gilang Maulana / Aang-657):**
+**Kontribusi P2 — Gilang Maulana (Aang-657 / NIM: 241524044):**
 - **Lingkup tanggung jawab:** Diagnosis, perbaikan kode, dan pengukuran 3 run baseline vs sesudah untuk tiket TK-1057 (perhitungan voucher membekukan layar di `harga-promo.js`), TK-1070 (HP panas dan baterai boros saat diam di `promo.js`), dan TK-1063 (scroll daftar barang patah-patah di `gulir.js`), serta dokumentasi pada `laporan/trace/CATATAN-P2.md`.
 - **Penggunaan AI:** Menggunakan AI (Gemini) sebagai mitra diskusi teknis dan penyusun draf perbaikan kode. AI membantu mengidentifikasi *Layout Thrashing* pada `gulir.js`, merancang mekanisme *Time-Slicing* pada `harga-promo.js`, serta memindahkan animasi JS ke CSS Compositor (`transform: translateX`) pada `promo.js`. Setiap usulan AI diaudit dan diuji ulang menggunakan trace Performance panel DevTools (CPU 4x slowdown) sebelum diterapkan ke repositori utama.
 
-**Kontribusi P3 (Ismail / mailvlous):**
+**Kontribusi P3 — Fauzi Ismail (mailvlous / NIM: 241524042):**
 - **Lingkup tanggung jawab:** Diagnosis dan perbaikan integritas data/transaksi untuk tiket TK-1044 (umpan balik tombol `+ Keranjang` tertahan analitik) dan TK-1052 (pencegahan pesanan ganda saat checkout `Beli sekarang` di `keranjang.js`). Melakukan pembuktian empiris mikro-benchmark (`laporan/trace/bench-rudi-p3.mjs`) untuk membantah dugaan Rudi (#1 loop kategori, #3 bubble sort, dan #5 SDK vendor), serta dokumentasi pada `laporan/trace/CATATAN-P3.md`.
 - **Penggunaan AI:** Menggunakan OpenAI Codex untuk membantu membaca trace, menghitung median, menyusun hipotesis, dan mengusulkan implementasi. Memeriksa kembali usulan tersebut terhadap kode sumber, trace Performance, Network, dan hasil tiga run. Codex juga membuat uji otomatis untuk guard checkout yang diperlakukan sebagai bukti pendukung tanpa menggantikan trace protokol.
